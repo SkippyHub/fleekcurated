@@ -24,6 +24,7 @@ htmlcov/
 # Uploads / temp
 uploads/
 tmp/
+generated/
 *.log
 
 # Next.js

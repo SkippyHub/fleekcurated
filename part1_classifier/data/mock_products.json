@@ -2,6 +2,15 @@
   "source": "https://joinfleek.com",
   "products": [
     {
+      "id": "fleek-hugo-boss-tie",
+      "title": "Hugo Boss Designer Tie",
+      "category": "tie",
+      "style_tags": ["formal", "designer", "hugo-boss"],
+      "price": "Wholesale bundle",
+      "url": "https://www.joinfleek.com/products/designer-ties-bundle-set-of-500",
+      "image_url": "/demo/tie-boss.png"
+    },
+    {
       "id": "fleek-y2k-baby-tee",
       "title": "Y2K Graphic Baby Tees",
       "category": "t-shirt",

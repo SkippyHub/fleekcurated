@@ -30,7 +30,9 @@ export interface CustomizationResult {
   original_image_url: string;
   customized_image_url: string;
   prompt_used: string;
-  status: "demo" | "mock" | "generated";
+  edit_instruction?: string | null;
+  status: "demo" | "mock" | "generated" | "quota_exceeded" | "error";
+  error?: string | null;
 }
 
 export interface ProductMatch {
@@ -87,7 +89,14 @@ export interface ApiCurateResponse {
     original_image_url: string;
     customized_image_url: string;
     prompt_used: string;
+    edit_instruction?: string | null;
     status: string;
+    error?: string | null;
   };
+  matched_product: ProductMatch;
+}
+
+export interface ApiCustomizeResponse {
+  customization: ApiCurateResponse["customization"];
   matched_product: ProductMatch;
 }

@@ -12,10 +12,12 @@ def curate(
     *,
     product_id: str,
     text: str | None = None,
+    customization_prompt: str | None = None,
     image_bytes: bytes | None = None,
     image_path: str | None = None,
     image_url: str | None = None,
     content_type: str | None = None,
+    base_url: str = "http://localhost:8000",
 ) -> CurateResponse:
     analysis: AnalyzeResponse = analyze(
         text=text,
@@ -24,7 +26,14 @@ def curate(
         image_url=image_url,
         content_type=content_type,
     )
-    customization, matched_product = run_customization(product_id, analysis.description)
+    customization, matched_product = run_customization(
+        product_id,
+        analysis.description,
+        user_prompt=customization_prompt or text,
+        image_bytes=image_bytes,
+        image_path=image_path,
+        base_url=base_url,
+    )
     return CurateResponse(
         analysis=analysis,
         customization=customization,

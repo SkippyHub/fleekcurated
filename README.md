@@ -68,9 +68,13 @@ When your classifier is ready, set `NEXT_PUBLIC_DEMO_MODE=false` in `web/.env.lo
 
 | Step | Model | Purpose |
 |------|-------|---------|
-| Part 1 | `gemini-2.5-flash-lite` | Classify, describe outfit, JSON + Fleek lookup |
-| Part 2a | `gemini-2.5-flash-lite` | Reasoning — edit instruction, what to preserve |
-| Part 2b | `gemini-2.0-flash-preview-image-generation` | Image edit (Banana) — colour / pattern changes |
+| Part 1 | `gemini-3.5-flash` or `gemini-3.1-flash-lite` | Classify, describe outfit, JSON |
+| Part 2a | `gemini-3.1-flash-lite` | Edit instruction, what to preserve |
+| Part 2b | `gemini-3.1-flash-image` | Image edit (Nano Banana 2) |
+
+> Old models `gemini-2.0-flash-preview-image-generation` and `gemini-2.0-flash` are shut down — use the IDs above.
+
+Test: `python scripts/test_gemini.py`
 
 Two prompts for Part 2: one for **what to change** (JSON), one for **image edit** (Banana).
 

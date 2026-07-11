@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { curate } from "@/lib/api";
+import { curate, customizeProduct } from "@/lib/api";
 import { DEMO_SCENARIOS } from "@/lib/demo";
 import { defaultSelectedItem } from "@/lib/mock-data";
 import type { CurateResult } from "@/lib/types";
@@ -10,10 +10,12 @@ import OutfitItemCard from "./OutfitItemCard";
 type InputMode = "text" | "image" | "demo";
 type Step = 1 | 2 | 3;
 
+const TIE_PRODUCT_ID = "fleek-hugo-boss-tie";
+
 export default function CuratorStudio() {
   const [step, setStep] = useState<Step>(1);
   const [mode, setMode] = useState<InputMode>("demo");
-  const [demoScenario, setDemoScenario] = useState<keyof typeof DEMO_SCENARIOS>("suit");
+  const [demoScenario, setDemoScenario] = useState<keyof typeof DEMO_SCENARIOS>("tie");
   const [text, setText] = useState("");
   const [customPrompt, setCustomPrompt] = useState(
     "Recolour to deep burgundy. Keep the geometric pattern and Hugo Boss branding exactly."
@@ -22,6 +24,7 @@ export default function CuratorStudio() {
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [altering, setAltering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CurateResult | null>(null);
   const [source, setSource] = useState<"demo" | "api">("demo");
@@ -72,7 +75,65 @@ export default function CuratorStudio() {
 
   function handleItemSelect(itemId: string) {
     setSelectedItemId(itemId);
-    runCurate(itemId);
+    setStep(3);
+  }
+
+  async function handleGenerateAlteration() {
+    setAltering(true);
+    setError(null);
+    setStep(3);
+    try {
+      const { data } = await customizeProduct({
+        productId: TIE_PRODUCT_ID,
+        customizationPrompt: customPrompt,
+        clothingItem: "tie",
+        image: mode === "image" ? image ?? undefined : undefined,
+      });
+      const mapped = {
+        customization: {
+          item_id: data.customization.product_id,
+          original_image_url: data.customization.original_image_url,
+          customized_image_url: data.customization.customized_image_url,
+          prompt_used: data.customization.prompt_used,
+          edit_instruction: data.customization.edit_instruction,
+          status: data.customization.status as CurateResult["customization"]["status"],
+          error: data.customization.error,
+        },
+        matched_product: data.matched_product,
+      };
+      setResult((prev) => ({
+        analysis: prev?.analysis ?? {
+          input_type: "text",
+          confidence: 1,
+          summary: customPrompt,
+          items: [
+            {
+              id: "tie",
+              label: "Tie",
+              type: "Necktie",
+              brand: "Hugo Boss",
+              customization_intent: customPrompt,
+              fleek_lookup: {
+                search_term: "Hugo Boss ties",
+                relevant_bundles: [
+                  {
+                    title: data.matched_product.title,
+                    url: data.matched_product.url,
+                    price: data.matched_product.price,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        ...mapped,
+      }));
+      setSource("api");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Alteration failed.");
+    } finally {
+      setAltering(false);
+    }
   }
 
   function reset() {
@@ -317,34 +378,69 @@ export default function CuratorStudio() {
 
           {/* Part 2 */}
           <div className="rounded-2xl border border-lime-400/20 bg-lime-400/[0.03] p-6 sm:p-7">
-            <h3 className="text-lg font-semibold">3. AI customisation</h3>
+            <h3 className="text-lg font-semibold">3. AI alteration (Gemini Banana)</h3>
             <p className="mt-1 text-sm text-zinc-500">
-              Wire Gemini image edit in{" "}
-              <code className="text-lime-300/80">part2_customizer/customizer.py</code>
+              Part 2 — calls <code className="text-lime-300/80">POST /customize</code> with your prompt
             </p>
 
-            {!result && !loading && (
+            <button
+              type="button"
+              onClick={handleGenerateAlteration}
+              disabled={altering}
+              className="mt-4 w-full rounded-full bg-lime-400 py-3 text-sm font-semibold text-black hover:bg-lime-300 disabled:opacity-50"
+            >
+              {altering ? "Generating with Gemini…" : "Generate tie alteration"}
+            </button>
+
+            {!result && !altering && (
               <p className="mt-4 text-sm text-zinc-600">
-                Before / after preview shows after analysis.
+                Uses Hugo Boss tie + your customisation prompt above.
               </p>
             )}
 
-            {result && (
+            {altering && (
+              <div className="mt-4 space-y-3 animate-pulse">
+                <div className="h-40 rounded bg-white/10" />
+                <div className="h-40 rounded bg-white/10" />
+              </div>
+            )}
+
+            {result && !altering && (
               <div className="mt-5 space-y-5">
-                <span className="inline-block rounded-full bg-amber-400/15 px-3 py-1 text-xs uppercase text-amber-200">
+                <span
+                  className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase ${
+                    result.customization.status === "generated"
+                      ? "bg-lime-400/20 text-lime-300"
+                      : result.customization.status === "quota_exceeded"
+                        ? "bg-red-400/15 text-red-300"
+                        : "bg-amber-400/15 text-amber-200"
+                  }`}
+                >
                   {result.customization.status}
                 </span>
-                <p className="text-sm text-zinc-400">{result.customization.prompt_used}</p>
+
+                {result.customization.edit_instruction && (
+                  <p className="text-xs text-zinc-500">
+                    Edit: {result.customization.edit_instruction}
+                  </p>
+                )}
+                {result.customization.error && (
+                  <p className="text-sm text-red-300">{result.customization.error}</p>
+                )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
+                  <ImageCompare label="Original" src={result.customization.original_image_url} />
                   <ImageCompare
-                    label="Original"
-                    src={result.customization.original_image_url}
-                  />
-                  <ImageCompare
-                    label="Customised (demo)"
+                    label={
+                      result.customization.status === "generated"
+                        ? "Customised (Gemini)"
+                        : "Customised"
+                    }
                     src={result.customization.customized_image_url}
-                    demoTint
+                    demoTint={
+                      result.customization.status !== "generated" &&
+                      source === "demo"
+                    }
                   />
                 </div>
 
@@ -354,9 +450,6 @@ export default function CuratorStudio() {
                   </p>
                   <p className="mt-2 text-lg font-medium">{result.matched_product.title}</p>
                   <p className="text-lime-300">{result.matched_product.price}</p>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Match score {Math.round(result.matched_product.match_score * 100)}%
-                  </p>
                   <a
                     href={result.matched_product.url}
                     target="_blank"

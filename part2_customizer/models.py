@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from part1_classifier.models import AnalyzeResponse, PromptDescription
+from part1_classifier.models import AnalyzeResponse
 
 
 class CustomizationResult(BaseModel):
@@ -10,7 +10,9 @@ class CustomizationResult(BaseModel):
     original_image_url: str
     customized_image_url: str
     prompt_used: str
-    status: str = Field(description="mock | generated")
+    edit_instruction: str | None = None
+    status: str = Field(description="mock | generated | quota_exceeded | error")
+    error: str | None = None
 
 
 class ProductMatch(BaseModel):
@@ -20,6 +22,13 @@ class ProductMatch(BaseModel):
     price: str
     image_url: str
     match_score: float = Field(ge=0.0, le=1.0)
+
+
+class CustomizeResponse(BaseModel):
+    """Part 2 only — AI alteration + product match."""
+
+    customization: CustomizationResult
+    matched_product: ProductMatch
 
 
 class CurateResponse(BaseModel):
