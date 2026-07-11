@@ -35,6 +35,10 @@ class FleekBundleHit(BaseModel):
     title: str
     url: str
     price: str | None = None
+    image_url: str | None = None
+    pieces: int | None = None
+    price_amount: float | None = None
+    price_currency: str = "USD"
     match_score: float = Field(default=0.0, ge=0.0, le=1.0)
 
 

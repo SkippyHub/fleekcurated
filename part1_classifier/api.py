@@ -11,9 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from part1_classifier.catalogue import list_products
-from part1_classifier.classifier import classify_input
-from part1_classifier.describer import describe_prompt
-from part1_classifier.models import AnalyzeResponse, InputType
+from part1_classifier.pipeline import analyze
+from part1_classifier.models import AnalyzeResponse
 from part2_customizer.curate_pipeline import curate
 from part2_customizer.models import CurateResponse, CustomizeResponse, EstimateResponse, OrderResponse
 from part2_customizer.pipeline import customize_only
@@ -63,25 +62,18 @@ async def analyze_prompt(
     image: Optional[UploadFile] = File(default=None),
     image_url: Optional[str] = Form(default=None),
 ) -> AnalyzeResponse:
+    """Part 1 — classify input, Gemini outfit extraction, Fleek bundle lookup."""
     image_bytes, content_type = await _read_image(image)
 
     try:
-        classification = classify_input(
+        return analyze(
             text=text,
             image_bytes=image_bytes,
+            image_url=image_url,
             content_type=content_type,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    description = describe_prompt(
-        classification.input_type,
-        text=text,
-        image_bytes=image_bytes if classification.input_type == InputType.IMAGE else None,
-        image_url=image_url,
-    )
-
-    return AnalyzeResponse(classification=classification, description=description)
 
 
 @app.post("/estimate", response_model=EstimateResponse)

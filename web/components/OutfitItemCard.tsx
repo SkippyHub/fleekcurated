@@ -3,35 +3,19 @@ import type { OutfitItem } from "@/lib/types";
 
 interface Props {
   item: OutfitItem;
-  selected: boolean;
-  onSelect: () => void;
 }
 
-export default function OutfitItemCard({ item, selected, onSelect }: Props) {
+export default function OutfitItemCard({ item }: Props) {
   const bundles = matchedBundlesForItem(item, 2);
+
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full rounded-md border p-4 text-left transition ${
-        selected
-          ? "border-tiger-gold bg-tiger-gold/5 ring-1 ring-tiger-gold/30"
-          : "border-fleek-border bg-fleek-surface hover:border-tiger-gold/40"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
-            {item.label}
-          </p>
-          <p className="mt-0.5 font-semibold text-fleek-text">{item.type}</p>
-          {item.brand && <p className="text-sm text-fleek-muted">{item.brand}</p>}
-        </div>
-        {selected && (
-          <span className="shrink-0 rounded-full bg-tiger-gold px-2 py-0.5 text-[10px] font-bold uppercase text-charred-clove">
-            Edit
-          </span>
-        )}
+    <div className="rounded-md border border-fleek-border bg-fleek-surface p-4">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
+          {item.label}
+        </p>
+        <p className="mt-0.5 font-semibold text-fleek-text">{item.type}</p>
+        {item.brand && <p className="text-sm text-fleek-muted">{item.brand}</p>}
       </div>
 
       <dl className="mt-3 grid gap-1 text-sm">
@@ -62,7 +46,6 @@ export default function OutfitItemCard({ item, selected, onSelect }: Props) {
                   href={b.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
                   className="text-xs font-medium text-fleek-text hover:text-tiger-gold hover:underline"
                 >
                   {b.title}
@@ -72,6 +55,6 @@ export default function OutfitItemCard({ item, selected, onSelect }: Props) {
           </ul>
         </div>
       )}
-    </button>
+    </div>
   );
 }

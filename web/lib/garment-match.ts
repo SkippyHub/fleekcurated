@@ -7,6 +7,10 @@ export interface FleekBundle {
   url: string;
   price?: string;
   product_id?: string;
+  match_score?: number;
+  image_url?: string;
+  pieces?: number;
+  price_amount?: number;
 }
 
 /** Slot id or garment type → what the bundle title/search must align with */
@@ -96,7 +100,10 @@ export function pickBestBundles(
       score: scoreBundleForGarment(b, itemId, garmentType, searchTerm),
     }))
     .filter((x) => x.score >= 0)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (b.bundle.match_score ?? 0) - (a.bundle.match_score ?? 0);
+    });
 
   return scored.slice(0, limit).map((x) => x.bundle);
 }
@@ -109,8 +116,9 @@ export function pickBestBundle(
 ): { bundle: FleekBundle; score: number } | null {
   const best = pickBestBundles(candidates, itemId, garmentType, searchTerm, 1);
   if (!best.length) return null;
-  const score = scoreBundleForGarment(best[0], itemId, garmentType, searchTerm);
-  return { bundle: best[0], score: Math.max(score, 0.55) };
+  const garmentScore = scoreBundleForGarment(best[0], itemId, garmentType, searchTerm);
+  const score = best[0].match_score ?? Math.max(garmentScore, 0.55);
+  return { bundle: best[0], score };
 }
 
 /** Curated Fleek bundles per slot — garment-correct for blue formal suit demo */
@@ -140,20 +148,6 @@ export const FLEEK_SLOT_BUNDLES: Record<string, FleekBundle[]> = {
     },
   ],
   tie: [
-    {
-      product_id: "fleek-hugo-boss-tie",
-      title: "Designer Ties Bundle (500 pcs)",
-      url: "https://www.joinfleek.com/products/designer-ties-bundle-set-of-500",
-      price: "Bulk wholesale",
-    },
-    {
-      product_id: "fleek-mix-neckwear",
-      title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
-      url: "https://www.joinfleek.com/products/men-s-mix-brand-tie-neckwear-23-pieces",
-      price: "Wholesale bundle",
-    },
-  ],
-  "tie-selected": [
     {
       product_id: "fleek-hugo-boss-tie",
       title: "Designer Ties Bundle (500 pcs)",

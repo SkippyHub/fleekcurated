@@ -1,6 +1,6 @@
 import { matchedBundlesForItem } from "./outfit-matcher";
 import { resolveProductId } from "./pricing";
-import type { CurateResult, OutfitAnalysis, OutfitItem } from "./types";
+import type { CurateResult, FleekListing, OutfitAnalysis, OutfitItem } from "./types";
 
 const FLEEK = "https://www.joinfleek.com";
 
@@ -17,17 +17,9 @@ export const DEMO_SCENARIOS = {
     id: "tie-boss",
     label: "Tie close-up (extracted)",
     image: "/demo/tie-boss.png",
-    caption: "Crop from the suit photo — ready for join fleek embroidery",
+    caption: "Gemini crop from the suit photo — the piece you customise",
     primary: false,
     flow: "customize" as const,
-  },
-  pile: {
-    id: "tie-pile",
-    label: "Wholesale tie pile",
-    image: "/demo/tie-pile.png",
-    caption: "Pick the best Hugo Boss tie from a Fleek bundle",
-    primary: false,
-    flow: "select" as const,
   },
 } as const;
 
@@ -110,10 +102,6 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
             url: `${FLEEK}/products/designer-ties-bundle-set-of-500`,
             price: "Bulk wholesale",
           },
-          {
-            title: "Men's Mix Brand Tie & Neckwear",
-            url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
-          },
         ],
       },
     },
@@ -159,46 +147,22 @@ export const MOCK_OUTFIT_TIE: OutfitAnalysis = {
   ],
 };
 
-export const MOCK_OUTFIT_PILE: OutfitAnalysis = {
-  input_type: "image",
-  confidence: 0.91,
-  summary:
-    "Wholesale designer tie bundle: Hugo Boss, Giorgio Armani, Kenzo, Moschino, Burberry, Versace, Balmain.",
-  items: [
-    {
-      id: "tie-selected",
-      label: "Selected tie",
-      type: "Necktie",
-      color: "Dark navy",
-      pattern: "Blue geometric lattice (Hugo Boss)",
-      brand: "Hugo Boss",
-      customization_intent: "Best match for navy suit — add 'join fleek' embroidery",
-      image_url: "/demo/tie-boss.png",
-      fleek_lookup: {
-        search_term: "Hugo Boss ties neckwear",
-        relevant_bundles: [
-          {
-            title: "Designer Ties Bundle (500 pcs)",
-            url: `${FLEEK}/products/designer-ties-bundle-set-of-500`,
-          },
-        ],
-      },
-    },
-  ],
-};
-
 export function buildDemoCurateResult(params: {
   analysis: OutfitAnalysis;
   selectedItemId: string;
   customizationPrompt: string;
+  listing?: FleekListing;
 }): CurateResult {
   const item =
     params.analysis.items.find((i) => i.id === params.selectedItemId) ??
     params.analysis.items[0];
 
-  const original = item.image_url ?? "/demo/tie-boss.png";
-  const matched = matchedBundlesForItem(item, 1)[0] ?? item.fleek_lookup.relevant_bundles[0];
-  const productId = resolveProductId(item.id);
+  const listing = params.listing;
+  const fallback =
+    matchedBundlesForItem(item, 1)[0] ?? item.fleek_lookup.relevant_bundles[0];
+  const original = listing?.image_url ?? item.image_url ?? "/demo/tie-boss.png";
+  const productId =
+    listing?.product_id?.startsWith("fleek-") ? listing.product_id : resolveProductId(item.id);
 
   return {
     analysis: params.analysis,
@@ -211,11 +175,11 @@ export function buildDemoCurateResult(params: {
     },
     matched_product: {
       product_id: productId,
-      title: matched?.title ?? `${item.brand ?? ""} ${item.type}`.trim(),
-      url: matched?.url ?? FLEEK,
-      price: matched?.price ?? "See Fleek listing",
+      title: listing?.title ?? fallback?.title ?? `${item.brand ?? ""} ${item.type}`.trim(),
+      url: listing?.url ?? fallback?.url ?? FLEEK,
+      price: listing?.price ?? fallback?.price ?? "See Fleek listing",
       image_url: original,
-      match_score: 0.92,
+      match_score: listing?.match_score ?? 0.92,
     },
   };
 }
@@ -225,9 +189,6 @@ export function analysisFromText(text: string): OutfitAnalysis {
   if (lower.includes("tie") && (lower.includes("boss") || lower.includes("fleek") || lower.includes("embroid"))) {
     return { ...MOCK_OUTFIT_TIE, summary: text };
   }
-  if (lower.includes("pile") || lower.includes("bundle") || lower.includes("select")) {
-    return { ...MOCK_OUTFIT_PILE, summary: text };
-  }
   return { ...MOCK_OUTFIT_SUIT, summary: text, input_type: "text" };
 }
 
@@ -235,7 +196,6 @@ export function analysisFromDemoScenario(
   scenarioId: keyof typeof DEMO_SCENARIOS
 ): OutfitAnalysis {
   if (scenarioId === "tie") return MOCK_OUTFIT_TIE;
-  if (scenarioId === "pile") return MOCK_OUTFIT_PILE;
   return MOCK_OUTFIT_SUIT;
 }
 

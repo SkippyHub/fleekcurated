@@ -2,10 +2,9 @@ import {
   analysisFromDemoScenario,
   analysisFromText,
   buildDemoCurateResult,
-  defaultSelectedItem,
   DEMO_SCENARIOS,
 } from "./mock-data";
-import type { CurateResult, OutfitAnalysis } from "./types";
+import type { CurateResult, FleekListing, OutfitAnalysis } from "./types";
 
 const DEMO_DELAY_MS = 900;
 
@@ -31,20 +30,18 @@ export async function demoAnalyze(params: {
 export async function demoCurate(params: {
   text?: string;
   demoScenario?: keyof typeof DEMO_SCENARIOS;
-  selectedItemId?: string;
-  customizationPrompt?: string;
+}): Promise<OutfitAnalysis> {
+  return demoAnalyze(params);
+}
+
+export async function demoCustomize(params: {
+  analysis: OutfitAnalysis;
+  selectedItemId: string;
+  customizationPrompt: string;
+  listing?: FleekListing;
 }): Promise<CurateResult> {
-  const analysis = await demoAnalyze(params);
-  const selectedItemId =
-    params.selectedItemId ?? defaultSelectedItem(analysis.items);
-  return buildDemoCurateResult({
-    analysis,
-    selectedItemId,
-    customizationPrompt:
-      params.customizationPrompt ??
-      params.text ??
-      "Add embroidered 'join fleek' branding, preserve pattern and logo",
-  });
+  await wait(DEMO_DELAY_MS);
+  return buildDemoCurateResult(params);
 }
 
 export { DEMO_SCENARIOS };

@@ -20,7 +20,7 @@ export default function ExtractedItemsPanel({
         <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
           Extracted pieces ({items.length})
         </p>
-        <p className="text-[10px] text-fleek-muted">Tap to select for customisation</p>
+        <p className="text-[10px] text-fleek-muted">Matched to Fleek bundles</p>
       </div>
 
       <ul className={`space-y-2 ${compact ? "" : "max-h-64 overflow-y-auto pr-1"}`}>

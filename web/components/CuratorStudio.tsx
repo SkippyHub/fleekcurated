@@ -1,19 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { curate, customizeProduct } from "@/lib/api";
+import { curate, customizeCuratedPiece } from "@/lib/api";
 import { DEMO_SCENARIOS } from "@/lib/demo";
 import {
   analysisFromDemoScenario,
   defaultSelectedItem,
   selectedItemLabel,
 } from "@/lib/mock-data";
-import { buildCohesiveOutfit, outfitHasMultipleSlots } from "@/lib/outfit-matcher";
-import type { CurateResult } from "@/lib/types";
-import ExtractedItemsPanel from "./ExtractedItemsPanel";
+import { buildCohesiveOutfit } from "@/lib/outfit-matcher";
+import { defaultSelectionsFromAnalysis } from "@/lib/fleek-listing";
+import type { CurateResult, FleekListing } from "@/lib/types";
 import FleekLookupPanel from "./FleekLookupPanel";
 import OutfitItemCard from "./OutfitItemCard";
-import OutfitRemerge from "./OutfitRemerge";
+import Wardrobe from "./Wardrobe";
 import OrderReview from "./OrderReview";
 
 type InputMode = "text" | "image" | "demo";
@@ -41,9 +41,11 @@ export default function CuratorStudio() {
   const [selectedItemId, setSelectedItemId] = useState("");
   const [loading, setLoading] = useState(false);
   const [altering, setAltering] = useState(false);
+  const [customising, setCustomising] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CurateResult | null>(null);
-  const [source, setSource] = useState<"demo" | "api">("demo");
+  const [source, setSource] = useState<"demo" | "api" | "gemini">("demo");
+  const [selectedListings, setSelectedListings] = useState<Record<string, FleekListing>>({});
 
   const previewAnalysis = useMemo(() => {
     if (mode !== "demo") return null;
@@ -57,11 +59,11 @@ export default function CuratorStudio() {
     }
   }, [mode, demoScenario, previewAnalysis]);
 
-  const activeAnalysis = result?.analysis ?? previewAnalysis;
   const cohesiveOutfit = useMemo(() => {
-    if (!activeAnalysis || !outfitHasMultipleSlots(activeAnalysis)) return null;
-    return buildCohesiveOutfit(activeAnalysis);
-  }, [activeAnalysis]);
+    if (!result?.analysis) return null;
+    const outfit = buildCohesiveOutfit(result.analysis);
+    return outfit.slots.length > 0 ? outfit : null;
+  }, [result?.analysis]);
 
   const sourceOutfitImage =
     mode === "demo" ? DEMO_SCENARIOS[demoScenario].image : preview ?? undefined;
@@ -88,10 +90,19 @@ export default function CuratorStudio() {
       });
       setResult(data);
       setSource(src);
+      setSelectedListings(defaultSelectionsFromAnalysis(data.analysis.items));
       setSelectedItemId(itemId ?? defaultSelectedItem(data.analysis.items));
-      setStep(outfitHasMultipleSlots(data.analysis) ? 3 : 2);
+      const wardrobe = buildCohesiveOutfit(data.analysis);
+      setStep(wardrobe.slots.length > 0 ? 3 : 2);
+      setCustomising(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      const raw = err instanceof Error ? err.message : "Something went wrong.";
+      try {
+        const parsed = JSON.parse(raw) as { detail?: string };
+        setError(parsed.detail ?? raw);
+      } catch {
+        setError(raw);
+      }
     } finally {
       setLoading(false);
     }
@@ -110,10 +121,27 @@ export default function CuratorStudio() {
     await runCurate();
   }
 
-  function handleItemSelect(itemId: string) {
+  function handleWardrobeSelect(itemId: string) {
     setSelectedItemId(itemId);
+  }
+
+  function handleSelectListing(itemId: string, listing: FleekListing) {
+    setSelectedListings((prev) => ({ ...prev, [itemId]: listing }));
+    setSelectedItemId(itemId);
+    setError(null);
+  }
+
+  function handleCustomiseItem(itemId: string) {
+    const listing = selectedListings[itemId];
+    if (!listing?.product_id && !listing?.image_url) {
+      setError("Select a Fleek listing for this piece first — browse listings in your wardrobe.");
+      return;
+    }
+    setSelectedItemId(itemId);
+    setCustomising(true);
     setStep(4);
-    const items = result?.analysis.items ?? previewAnalysis?.items ?? [];
+    setError(null);
+    const items = result?.analysis.items ?? [];
     const item = items.find((i) => i.id === itemId);
     if (item?.customization_intent) {
       setCustomPrompt(item.customization_intent);
@@ -121,57 +149,27 @@ export default function CuratorStudio() {
   }
 
   async function handleGenerateAlteration() {
+    if (!result?.analysis) return;
     setAltering(true);
     setError(null);
     setStep(4);
     try {
-      const { data } = await customizeProduct({
-        productId: TIE_PRODUCT_ID,
+      const listing = selectedListings[selectedItemId];
+      const productId =
+        listing?.product_id?.startsWith("fleek-") ? listing.product_id : TIE_PRODUCT_ID;
+
+      const { result: customized, source: src } = await customizeCuratedPiece({
+        source,
+        analysis: result.analysis,
+        selectedItemId,
         customizationPrompt: customPrompt,
-        clothingItem: "tie",
+        productId,
+        listing,
+        clothingItem: selectedItemId.includes("tie") ? "tie" : undefined,
         image: mode === "image" ? image ?? undefined : undefined,
       });
-      const mapped = {
-        customization: {
-          item_id: data.customization.product_id,
-          original_image_url: data.customization.original_image_url,
-          customized_image_url: data.customization.customized_image_url,
-          prompt_used: data.customization.prompt_used,
-          edit_instruction: data.customization.edit_instruction,
-          status: data.customization.status as CurateResult["customization"]["status"],
-          error: data.customization.error,
-        },
-        matched_product: data.matched_product,
-      };
-      setResult((prev) => ({
-        analysis: prev?.analysis ?? {
-          input_type: "text",
-          confidence: 1,
-          summary: customPrompt,
-          items: [
-            {
-              id: "tie",
-              label: "Tie",
-              type: "Necktie",
-              brand: "Hugo Boss",
-              customization_intent: customPrompt,
-              fleek_lookup: {
-                search_term: "Hugo Boss ties",
-                relevant_bundles: [
-                  {
-                    title: data.matched_product.title,
-                    url: data.matched_product.url,
-                    price: data.matched_product.price,
-                  },
-                ],
-              },
-            },
-          ],
-        },
-        ...mapped,
-      }));
-      setSource("api");
-      setStep(4);
+      setResult((prev) => (prev ? { ...prev, ...customized } : prev));
+      setSource(src);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Alteration failed.");
     } finally {
@@ -183,20 +181,16 @@ export default function CuratorStudio() {
     setStep(1);
     setResult(null);
     setError(null);
+    setCustomising(false);
+    setSelectedListings({});
   }
 
-  function handlePreviewItemSelect(itemId: string) {
-    setSelectedItemId(itemId);
-    const items = previewAnalysis?.items ?? [];
-    const item = items.find((i) => i.id === itemId);
-    if (item?.customization_intent) {
-      setCustomPrompt(item.customization_intent);
-    }
-  }
+  const activeListing = selectedListings[selectedItemId];
 
-  const displayItems = result?.analysis.items ?? previewAnalysis?.items ?? [];
+  const displayItems = result?.analysis.items ?? [];
   const activeItemLabel = selectedItemLabel(displayItems, selectedItemId);
 
+  const hasCustomizationPreview = Boolean(result?.customization.customized_image_url);
   const demoImage = mode === "demo" ? DEMO_SCENARIOS[demoScenario].image : preview;
   const showDemoPreview = mode === "demo" || (mode === "image" && preview);
 
@@ -215,12 +209,12 @@ export default function CuratorStudio() {
             </span>
             <span className={`hidden sm:inline ${step >= s ? "font-medium text-fleek-text" : "text-fleek-muted"}`}>
               {s === 1
-                ? "Input"
+                ? "Inspire"
                 : s === 2
                   ? "Extract"
                   : s === 3
-                    ? "Match"
-                    : "Customise & order"}
+                    ? "Wardrobe"
+                    : "Customise"}
             </span>
             {s < 4 && <span className="mx-1 text-fleek-border">/</span>}
           </div>
@@ -240,10 +234,11 @@ export default function CuratorStudio() {
         {/* Left — input */}
         <section className="lg:col-span-2">
           <div className="surface-card rounded-md p-6 sm:p-7">
-            <h3 className="text-lg font-semibold">1. Outfit input</h3>
+            <h3 className="text-lg font-semibold">1. Share a look</h3>
             <p className="mt-1 text-sm text-fleek-muted">
-              Upload a full outfit photo. We extract each piece, match Fleek bundles, then
-              customise your selection.
+              Your outfit photo, a film costume reference, or a brand mood board — we extract
+              each piece and curate matching Fleek listings. Customisation comes after you pick
+              a listing.
             </p>
 
             <div className="mt-4 flex gap-1 rounded-full bg-fleek-bg p-1 border border-fleek-border">
@@ -289,25 +284,9 @@ export default function CuratorStudio() {
                     </div>
                   </div>
 
-                  {previewAnalysis && (
-                    <>
-                      <ExtractedItemsPanel
-                        items={previewAnalysis.items}
-                        selectedId={selectedItemId}
-                        onSelect={handlePreviewItemSelect}
-                      />
-                      <FleekLookupPanel
-                        items={previewAnalysis.items}
-                        cohesiveOutfit={cohesiveOutfit}
-                        selectedItemId={selectedItemId}
-                        onSelectItem={handlePreviewItemSelect}
-                      />
-                    </>
-                  )}
-
                   <p className="border-t border-fleek-border pt-3 text-[10px] text-fleek-muted">
                     Switch demo:{" "}
-                    {(["suit", "tie", "pile"] as const).map((key, i) => (
+                    {(["suit", "tie"] as const).map((key, i) => (
                       <span key={key}>
                         {i > 0 && " · "}
                         <button
@@ -319,7 +298,7 @@ export default function CuratorStudio() {
                               : "hover:text-fleek-text hover:underline"
                           }
                         >
-                          {key === "suit" ? "full outfit" : key === "tie" ? "tie crop" : "tie pile"}
+                          {key === "suit" ? "full outfit" : "tie crop"}
                         </button>
                       </span>
                     ))}
@@ -358,18 +337,6 @@ export default function CuratorStudio() {
                 />
               )}
 
-              <label className="block">
-                <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-fleek-muted">
-                  Customise {activeItemLabel.toLowerCase()}
-                </span>
-                <textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  rows={2}
-                  className="input-fleek w-full resize-none rounded-md px-4 py-3 text-sm"
-                />
-              </label>
-
               {error && (
                 <p className="rounded-lg bg-chili-red/10 px-3 py-2 text-sm text-chili-red">
                   {error}
@@ -381,7 +348,7 @@ export default function CuratorStudio() {
                 disabled={loading}
                 className="w-full rounded-full bg-tiger-gold py-3 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90 disabled:opacity-50"
               >
-                {loading ? "Extracting pieces…" : "Extract & match Fleek bundles"}
+                {loading ? "Gemini is analysing your outfit…" : "Curate Fleek wardrobe"}
               </button>
             </form>
           </div>
@@ -395,14 +362,14 @@ export default function CuratorStudio() {
               <h3 className="text-lg font-semibold">2. Extract pieces</h3>
               {result && (
                 <span className="rounded-full bg-fleek-bg border border-fleek-border px-2 py-0.5 text-[10px] font-medium uppercase text-fleek-muted">
-                  {source} mode
+                  {source === "gemini" ? "Gemini · live" : `${source} mode`}
                 </span>
               )}
             </div>
 
             {!result && !loading && (
               <p className="mt-4 text-sm text-fleek-muted">
-                Structured outfit JSON and Fleek lookups appear here.
+                Extracted pieces and Fleek matches appear here after curation.
               </p>
             )}
 
@@ -432,18 +399,20 @@ export default function CuratorStudio() {
                 </p>
 
                 <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
-                  Extracted items — tap to customise
+                  Extracted pieces
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {result.analysis.items.map((item) => (
-                    <OutfitItemCard
-                      key={item.id}
-                      item={item}
-                      selected={selectedItemId === item.id}
-                      onSelect={() => handleItemSelect(item.id)}
-                    />
+                    <OutfitItemCard key={item.id} item={item} />
                   ))}
                 </div>
+
+                <FleekLookupPanel
+                  items={result.analysis.items}
+                  cohesiveOutfit={cohesiveOutfit}
+                  selectedItemId={selectedItemId}
+                  onSelectItem={handleWardrobeSelect}
+                />
 
                 <details className="rounded-md border border-fleek-border bg-fleek-bg p-4">
                   <summary className="cursor-pointer text-xs text-fleek-muted">
@@ -457,12 +426,16 @@ export default function CuratorStudio() {
             )}
           </div>
 
-          {cohesiveOutfit && (
-            <OutfitRemerge
+          {cohesiveOutfit && result && (
+            <Wardrobe
               outfit={cohesiveOutfit}
+              items={result.analysis.items}
               sourceImage={sourceOutfitImage}
               selectedItemId={selectedItemId}
-              onSelectItem={handleItemSelect}
+              selectedListings={selectedListings}
+              onSelectItem={handleWardrobeSelect}
+              onSelectListing={handleSelectListing}
+              onCustomiseItem={handleCustomiseItem}
               customizedItemId={
                 result?.customization.status === "generated" ||
                 result?.customization.status === "cached"
@@ -478,36 +451,73 @@ export default function CuratorStudio() {
             />
           )}
 
-          {/* Part 2 */}
+          {/* Part 2 — only after user picks a piece to customise */}
           <div className="surface-accent rounded-md p-6 sm:p-7">
-            <h3 className="text-lg font-semibold text-fleek-text">4. Customise & order</h3>
-            <p className="mt-1 text-sm text-fleek-muted">
-              AI alteration preview + wholesale pricing for {activeItemLabel.toLowerCase()}
-            </p>
-
-            <button
-              type="button"
-              onClick={handleGenerateAlteration}
-              disabled={altering}
-              className="mt-4 w-full rounded-full bg-tiger-gold py-3 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90 disabled:opacity-50"
-            >
-              {altering ? "Generating with Gemini…" : `Generate ${activeItemLabel.toLowerCase()} alteration`}
-            </button>
-
-            {!result && !altering && (
+            <h3 className="text-lg font-semibold text-fleek-text">4. Customise piece</h3>
+            {!customising ? (
               <p className="mt-4 text-sm text-fleek-muted">
-                Uses Hugo Boss tie + your customisation prompt above.
+                Your curated wardrobe is ready. Choose a piece above and click{" "}
+                <span className="font-medium text-fleek-text">Customise this piece</span> to
+                preview AI alterations and see wholesale pricing.
               </p>
+            ) : (
+              <>
+                <p className="mt-1 text-sm text-fleek-muted">
+                  Preview an AI alteration on{" "}
+                  <span className="font-medium text-fleek-text">
+                    {activeListing?.title ?? activeItemLabel.toLowerCase()}
+                  </span>
+                  , then order the Fleek bundle.
+                </p>
+
+                {activeListing?.image_url && (
+                  <div className="mt-3 flex items-center gap-3 rounded-md border border-fleek-border bg-fleek-bg p-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activeListing.image_url}
+                      alt=""
+                      className="h-16 w-16 rounded-md object-cover"
+                    />
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-fleek-muted">
+                        Selected Fleek listing
+                      </p>
+                      <p className="text-sm font-semibold text-fleek-text">{activeListing.title}</p>
+                    </div>
+                  </div>
+                )}
+
+                <label className="mt-4 block">
+                  <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-fleek-muted">
+                    Customisation brief
+                  </span>
+                  <textarea
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    rows={3}
+                    className="input-fleek w-full resize-none rounded-md px-4 py-3 text-sm"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateAlteration}
+                  disabled={altering}
+                  className="mt-4 w-full rounded-full bg-tiger-gold py-3 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90 disabled:opacity-50"
+                >
+                  {altering ? "Generating with Gemini…" : `Generate ${activeItemLabel.toLowerCase()} preview`}
+                </button>
+              </>
             )}
 
-            {altering && (
+            {customising && altering && (
               <div className="mt-4 space-y-3 animate-pulse">
                 <div className="h-40 rounded bg-fleek-border" />
                 <div className="h-40 rounded bg-fleek-border" />
               </div>
             )}
 
-            {result && !altering && (
+            {customising && hasCustomizationPreview && result && !altering && (
               <div className="mt-5 space-y-5">
                 <span
                   className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase ${
@@ -571,10 +581,14 @@ export default function CuratorStudio() {
                   compact
                   itemId={selectedItemId}
                   itemLabel={activeItemLabel}
-                  productId={resolveProductId(result)}
+                  productId={
+                    activeListing?.product_id?.startsWith("fleek-")
+                      ? activeListing.product_id
+                      : resolveProductId(result)
+                  }
                   customizationPrompt={customPrompt}
-                  productTitle={result.matched_product.title}
-                  productUrl={result.matched_product.url}
+                  productTitle={activeListing?.title ?? result.matched_product.title}
+                  productUrl={activeListing?.url ?? result.matched_product.url}
                   includePreview={
                     result.customization.status === "generated" ||
                     result.customization.status === "cached"

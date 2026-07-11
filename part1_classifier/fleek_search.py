@@ -103,7 +103,7 @@ def match_catalogue(
     search_term: str,
     garment_type: str | None = None,
     item_id: str = "",
-    limit: int = 3,
+    limit: int = 6,
 ) -> list[FleekBundleHit]:
     query = f"{search_term} {garment_type or ''}".strip()
     scored: list[tuple[float, FleekBundleHit]] = []
@@ -127,6 +127,10 @@ def match_catalogue(
                     title=product.title,
                     url=product.url,
                     price=product.price,
+                    image_url=product.image_url,
+                    pieces=product.pieces,
+                    price_amount=product.price_amount,
+                    price_currency=product.price_currency,
                     match_score=round(score, 2),
                 ),
             )

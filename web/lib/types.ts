@@ -2,7 +2,22 @@ export type InputType = "text" | "image";
 
 export interface FleekLookup {
   search_term: string;
-  relevant_bundles: { title: string; url: string; price?: string }[];
+  search_url?: string;
+  relevant_bundles: FleekListing[];
+}
+
+/** A selectable joinfleek.com listing (product page, not search URL). */
+export interface FleekListing {
+  product_id?: string;
+  title: string;
+  url: string;
+  price?: string;
+  match_score?: number;
+  image_url?: string;
+  pieces?: number;
+  price_amount?: number;
+  price_per_piece_gbp?: number;
+  bundle_gbp?: number;
 }
 
 export interface OutfitTheme {
@@ -19,7 +34,7 @@ export interface MatchedOutfitSlot {
   type: string;
   color?: string;
   image_url?: string;
-  bundle: { title: string; url: string; price?: string };
+  bundle: FleekListing;
   match_score: number;
   cohesion_note: string;
 }
@@ -145,6 +160,10 @@ export interface ApiOutfitBundle {
   url: string;
   price?: string | null;
   match_score?: number;
+  image_url?: string | null;
+  pieces?: number | null;
+  price_amount?: number | null;
+  price_currency?: string | null;
 }
 
 export interface ApiOutfitItem {

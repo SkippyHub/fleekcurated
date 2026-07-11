@@ -15,14 +15,14 @@ export default function Header() {
                 Fleek Curated
               </p>
               <h1 className="font-display text-lg font-semibold tracking-tight text-fleek-text">
-                AI Upsell Studio
+                AI Wardrobe Studio
               </h1>
             </div>
           </div>
           <nav className="hidden items-center gap-6 text-sm text-fleek-muted sm:flex">
-            <span>Describe</span>
+            <span>Inspire</span>
             <span className="text-fleek-border">→</span>
-            <span>Lookup</span>
+            <span>Curate</span>
             <span className="text-fleek-border">→</span>
             <span className="font-medium text-fleek-text">Customise</span>
           </nav>

@@ -84,7 +84,9 @@ export default function FleekLookupPanel({
         <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
           Fleek lookup ({rows.length})
         </p>
-        <p className="text-[10px] text-fleek-muted">Matched bundles on joinfleek.com</p>
+        <p className="text-[10px] text-fleek-muted">
+          {cohesiveOutfit ? "Synced with wardrobe below" : "Matched bundles on joinfleek.com"}
+        </p>
       </div>
 
       <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">

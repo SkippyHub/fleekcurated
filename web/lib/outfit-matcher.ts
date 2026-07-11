@@ -1,10 +1,16 @@
-import type { CohesiveOutfit, MatchedOutfitSlot, OutfitAnalysis, OutfitItem, OutfitTheme } from "./types";
+import type { CohesiveOutfit, FleekListing, MatchedOutfitSlot, OutfitAnalysis, OutfitItem, OutfitTheme } from "./types";
+import { bundleToListing } from "./fleek-listing";
 import {
   FLEEK_SLOT_BUNDLES,
   pickBestBundle,
   pickBestBundles,
   type FleekBundle,
 } from "./garment-match";
+
+function fleekSearchUrl(term: string): string {
+  const q = encodeURIComponent(term.trim()).replace(/%20/g, "+");
+  return `https://joinfleek.com/search?q=${q}&options[prefix]=last`;
+}
 
 function inferPalette(items: OutfitItem[]): string[] {
   const colors = items.map((i) => i.color?.toLowerCase() ?? "").join(" ");
@@ -48,17 +54,33 @@ function dominantBrand(theme: OutfitTheme): string | null {
   return theme.brands.find((b) => /hugo boss|ralph lauren|carhartt|levi/i.test(b)) ?? theme.brands[0] ?? null;
 }
 
-function candidatesForItem(item: OutfitItem): FleekBundle[] {
-  const fromSlot = FLEEK_SLOT_BUNDLES[item.id] ?? [];
-  const fromLookup = item.fleek_lookup.relevant_bundles.map((b) => ({
+/** Bundles from Part 1 Fleek lookup (Gemini search term + catalogue matches). */
+function lookupBundlesForItem(item: OutfitItem): FleekBundle[] {
+  return item.fleek_lookup.relevant_bundles.map((b) => ({
     title: b.title,
     url: b.url,
     price: b.price,
+    product_id: b.product_id,
+    match_score: b.match_score,
+    image_url: b.image_url,
+    pieces: b.pieces,
+    price_amount: b.price_amount,
   }));
-  // De-dupe by URL, slot bundles first (curated garment-correct)
+}
+
+/** Offline/demo fallback when lookup returned no catalogue hits. */
+function fallbackBundlesForItem(item: OutfitItem): FleekBundle[] {
+  return FLEEK_SLOT_BUNDLES[item.id] ?? [];
+}
+
+function candidatesForItem(item: OutfitItem): FleekBundle[] {
+  const fromLookup = lookupBundlesForItem(item);
+  if (fromLookup.length > 0) return fromLookup;
+
+  const fromSlot = fallbackBundlesForItem(item);
   const seen = new Set<string>();
   const merged: FleekBundle[] = [];
-  for (const b of [...fromSlot, ...fromLookup]) {
+  for (const b of fromSlot) {
     if (seen.has(b.url)) continue;
     seen.add(b.url);
     merged.push(b);
@@ -73,20 +95,40 @@ function pickCohesiveBundle(
 ): { bundle: FleekBundle; score: number; note: string } | null {
   const searchTerm = item.fleek_lookup.search_term;
   const candidates = candidatesForItem(item);
-  if (candidates.length === 0) return null;
 
-  const picked = pickBestBundle(candidates, item.id, item.type, searchTerm);
-  if (!picked) return null;
+  if (candidates.length > 0) {
+    const picked = pickBestBundle(candidates, item.id, item.type, searchTerm);
+    if (picked) {
+      const fromLookup = lookupBundlesForItem(item).length > 0;
+      const brandMatch =
+        anchorBrand && picked.bundle.title.toLowerCase().includes(anchorBrand.toLowerCase());
+      const note = fromLookup
+        ? brandMatch
+          ? `Fleek lookup · ${anchorBrand} line`
+          : `Fleek lookup · ${item.fleek_lookup.search_term}`
+        : brandMatch
+          ? `${item.type} match · ${anchorBrand} line`
+          : `${item.type} match · ${theme.palette[0]?.toLowerCase() ?? "coordinated"} palette`;
 
-  const brandMatch =
-    anchorBrand && picked.bundle.title.toLowerCase().includes(anchorBrand.toLowerCase());
-  const note = brandMatch
-    ? `${item.type} match · ${anchorBrand} line`
-    : `${item.type} match · ${theme.palette[0]?.toLowerCase() ?? "coordinated"} palette`;
+      return { bundle: picked.bundle, score: picked.score, note };
+    }
+  }
 
-  return { bundle: picked.bundle, score: picked.score, note };
+  if (searchTerm.trim()) {
+    return {
+      bundle: {
+        title: `Search on Fleek · ${searchTerm}`,
+        url: fleekSearchUrl(searchTerm),
+      },
+      score: 0.4,
+      note: `${item.type} · no catalogue hit yet — search on Fleek`,
+    };
+  }
+
+  return null;
 }
 
+/** Build wardrobe slots directly from extracted items + their Fleek lookup results. */
 export function buildCohesiveOutfit(analysis: OutfitAnalysis): CohesiveOutfit {
   const theme = deriveTheme(analysis);
   const anchor = dominantBrand(theme);
@@ -102,7 +144,7 @@ export function buildCohesiveOutfit(analysis: OutfitAnalysis): CohesiveOutfit {
       type: item.type,
       color: item.color,
       image_url: item.image_url,
-      bundle: picked.bundle,
+      bundle: bundleToListing(picked.bundle),
       match_score: picked.score,
       cohesion_note: picked.note,
     });
@@ -114,8 +156,8 @@ export function buildCohesiveOutfit(analysis: OutfitAnalysis): CohesiveOutfit {
       : 0;
 
   const summary = anchor
-    ? `Re-merged ${slots.length}-piece look anchored on ${anchor} — ${theme.style.toLowerCase()}, ${theme.palette.join(" + ").toLowerCase()}`
-    : `Re-merged ${slots.length}-piece look — ${theme.style.toLowerCase()}, cohesive ${theme.palette.join(" + ").toLowerCase()}`;
+    ? `Curated ${slots.length}-piece wardrobe anchored on ${anchor} — ${theme.style.toLowerCase()}, ${theme.palette.join(" + ").toLowerCase()}`
+    : `Curated ${slots.length}-piece wardrobe — ${theme.style.toLowerCase()}, cohesive ${theme.palette.join(" + ").toLowerCase()}`;
 
   return {
     theme,
@@ -126,8 +168,8 @@ export function buildCohesiveOutfit(analysis: OutfitAnalysis): CohesiveOutfit {
   };
 }
 
-/** Filter lookup bundles to garment-appropriate matches only */
-export function matchedBundlesForItem(item: OutfitItem, limit = 2) {
+/** Same bundles as wardrobe — keeps extract lookup panel in sync. */
+export function matchedBundlesForItem(item: OutfitItem, limit = 6) {
   const candidates = candidatesForItem(item);
   return pickBestBundles(candidates, item.id, item.type, item.fleek_lookup.search_term, limit);
 }
@@ -135,6 +177,6 @@ export function matchedBundlesForItem(item: OutfitItem, limit = 2) {
 export function outfitHasMultipleSlots(analysis: OutfitAnalysis): boolean {
   return analysis.items.filter((i) => {
     const bundles = matchedBundlesForItem(i, 1);
-    return bundles.length > 0 || (FLEEK_SLOT_BUNDLES[i.id]?.length ?? 0) > 0;
+    return bundles.length > 0 || Boolean(i.fleek_lookup.search_term.trim());
   }).length > 1;
 }
