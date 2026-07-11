@@ -1,4 +1,4 @@
-"""FastAPI routes for Part 1 — prompt classification & description."""
+"""FastAPI routes — Part 1 classifier + Part 2 integration."""
 
 from __future__ import annotations
 
@@ -7,14 +7,17 @@ from typing import Optional
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from part1_classifier.catalogue import list_products
 from part1_classifier.classifier import classify_input
 from part1_classifier.describer import describe_prompt
 from part1_classifier.models import AnalyzeResponse, InputType
+from part2_customizer.curate_pipeline import curate
+from part2_customizer.models import CurateResponse
 
 app = FastAPI(
-    title="Fleek Curated — Part 1 Classifier",
-    description="Classify text vs image prompts and describe clothing customisation intent for joinfleek.com",
-    version="0.1.0",
+    title="Fleek Curated",
+    description="Classify prompts and customise Fleek products for joinfleek.com",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -28,7 +31,14 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "fleek-part1-classifier"}
+    return {"status": "ok", "service": "fleek-curated"}
+
+
+@app.get("/products")
+def products() -> dict:
+    """Mock Fleek catalogue — used by Part 2 and the Next.js product picker."""
+    items = list_products()
+    return {"products": [p.model_dump() for p in items]}
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)
@@ -37,20 +47,7 @@ async def analyze_prompt(
     image: Optional[UploadFile] = File(default=None),
     image_url: Optional[str] = Form(default=None),
 ) -> AnalyzeResponse:
-    """
-    Analyze customer input from the Fleek upsell flow.
-
-    Send either:
-    - `text` — written prompt
-    - `image` — uploaded reference photo
-    - both — image plus caption/context
-    """
-    image_bytes: bytes | None = None
-    content_type: str | None = None
-
-    if image is not None:
-        image_bytes = await image.read()
-        content_type = image.content_type
+    image_bytes, content_type = await _read_image(image)
 
     try:
         classification = classify_input(
@@ -69,3 +66,33 @@ async def analyze_prompt(
     )
 
     return AnalyzeResponse(classification=classification, description=description)
+
+
+@app.post("/curate", response_model=CurateResponse)
+async def curate_prompt(
+    product_id: str = Form(...),
+    text: Optional[str] = Form(default=None),
+    image: Optional[UploadFile] = File(default=None),
+    image_url: Optional[str] = Form(default=None),
+) -> CurateResponse:
+    """Part 1 classify + describe, then Part 2 customise + product lookup."""
+    image_bytes, content_type = await _read_image(image)
+
+    try:
+        return curate(
+            product_id=product_id,
+            text=text,
+            image_bytes=image_bytes,
+            image_url=image_url,
+            content_type=content_type,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _read_image(image: Optional[UploadFile]) -> tuple[bytes | None, str | None]:
+    if image is None:
+        return None, None
+    return await image.read(), image.content_type

@@ -25,5 +25,8 @@ dev = ["pytest>=8.3.0"]
 [tool.setuptools.packages.find]
 include = ["part1_classifier*", "part2_customizer*"]
 
+[tool.setuptools.package-data]
+part1_classifier = ["data/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

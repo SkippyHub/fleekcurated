@@ -1,0 +1,59 @@
+{
+  "source": "https://joinfleek.com",
+  "products": [
+    {
+      "id": "fleek-y2k-baby-tee",
+      "title": "Y2K Graphic Baby Tees",
+      "category": "t-shirt",
+      "style_tags": ["y2k", "vintage", "streetwear"],
+      "price": "$103",
+      "url": "https://joinfleek.com",
+      "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop"
+    },
+    {
+      "id": "fleek-black-hoodie",
+      "title": "Premium Black Hoodie Bundle",
+      "category": "hoodie",
+      "style_tags": ["streetwear", "casual"],
+      "price": "$119",
+      "url": "https://joinfleek.com",
+      "image_url": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=800&fit=crop"
+    },
+    {
+      "id": "fleek-rl-polo",
+      "title": "Ralph Lauren Polo T-Shirts",
+      "category": "t-shirt",
+      "style_tags": ["preppy", "vintage"],
+      "price": "$151",
+      "url": "https://joinfleek.com",
+      "image_url": "https://images.unsplash.com/photo-1586790170083-2f9eceb11401?w=600&h=800&fit=crop"
+    },
+    {
+      "id": "fleek-levis-501",
+      "title": "Levi's 501 Vintage Jeans",
+      "category": "jeans",
+      "style_tags": ["vintage", "denim"],
+      "price": "$109",
+      "url": "https://joinfleek.com",
+      "image_url": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&h=800&fit=crop"
+    },
+    {
+      "id": "fleek-carhartt-jacket",
+      "title": "Carhartt Vintage Jacket",
+      "category": "jacket",
+      "style_tags": ["workwear", "vintage", "streetwear"],
+      "price": "$409",
+      "url": "https://joinfleek.com",
+      "image_url": "https://images.unsplash.com/photo-1551028718-00167b16eac5?w=600&h=800&fit=crop"
+    },
+    {
+      "id": "fleek-lulu-leggings",
+      "title": "Lululemon Leggings Mix",
+      "category": "shorts",
+      "style_tags": ["athleisure", "sporty"],
+      "price": "$135",
+      "url": "https://joinfleek.com",
+      "image_url": "https://images.unsplash.com/photo-1506629082955-511b2f4c2c8b?w=600&h=800&fit=crop"
+    }
+  ]
+}

@@ -1,11 +1,11 @@
-"""
-Part 2 — AI clothing customisation & product lookup (your hackathon work).
+"""Part 2 exports."""
 
-Expected flow:
-1. Take PromptDescription from Part 1
-2. Fetch the Fleek product image
-3. AI-generate a unique customised version
-4. Look up / swap the product in catalogue
+from part2_customizer.curate_pipeline import curate
+from part2_customizer.models import CurateResponse, CustomizationResult, ProductMatch
 
-Implement in part2_customizer/customizer.py and part2_customizer/product_lookup.py
-"""
+__all__ = [
+    "curate",
+    "CurateResponse",
+    "CustomizationResult",
+    "ProductMatch",
+]
