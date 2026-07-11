@@ -18,7 +18,7 @@ export default function CuratorStudio() {
   const [demoScenario, setDemoScenario] = useState<keyof typeof DEMO_SCENARIOS>("tie");
   const [text, setText] = useState("");
   const [customPrompt, setCustomPrompt] = useState(
-    "Recolour to deep burgundy. Keep the geometric pattern and Hugo Boss branding exactly."
+    "Add elegant embroidered branding that reads 'join fleek' on the tie. Keep the original blue colour, geometric pattern, and Hugo Boss logo. Make the embroidery look premium and subtle."
   );
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -251,7 +251,7 @@ export default function CuratorStudio() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   rows={4}
-                  placeholder="e.g. Hugo Boss tie — recolour to burgundy, keep geometric pattern"
+                  placeholder="e.g. Add embroidered 'join fleek' branding on this Hugo Boss tie"
                   className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm placeholder:text-zinc-600 focus:border-lime-400/50 focus:outline-none"
                 />
               )}

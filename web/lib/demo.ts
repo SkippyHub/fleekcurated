@@ -43,7 +43,7 @@ export async function demoCurate(params: {
     customizationPrompt:
       params.customizationPrompt ??
       params.text ??
-      "Recolour to burgundy, preserve pattern and branding",
+      "Add embroidered 'join fleek' branding, preserve pattern and logo",
   });
 }
 

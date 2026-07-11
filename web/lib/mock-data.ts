@@ -13,7 +13,7 @@ export const DEMO_SCENARIOS = {
     id: "tie-boss",
     label: "Hugo Boss tie",
     image: "/demo/tie-boss.png",
-    caption: "Recolour this Hugo Boss tie to burgundy, keep the geometric pattern",
+    caption: "Add embroidered 'join fleek' branding — keep the geometric pattern",
   },
   pile: {
     id: "tie-pile",
@@ -77,7 +77,7 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
       color: "Dark blue",
       pattern: "Geometric white & light blue medallion grid",
       brand: "Hugo Boss",
-      customization_intent: "Recolour to burgundy, preserve pattern and BOSS branding",
+      customization_intent: "Add embroidered 'join fleek' branding, keep pattern and BOSS logo",
       image_url: "/demo/tie-boss.png",
       fleek_lookup: {
         search_term: "Hugo Boss ties neckwear",
@@ -120,7 +120,7 @@ export const MOCK_OUTFIT_TIE: OutfitAnalysis = {
       color: "Royal blue",
       pattern: "White geometric diamond grid with circular motifs",
       brand: "Hugo Boss",
-      customization_intent: "Recolour base to burgundy, keep pattern exact",
+      customization_intent: "Add subtle 'join fleek' embroidery, keep pattern exact",
       image_url: "/demo/tie-boss.png",
       fleek_lookup: {
         search_term: "Hugo Boss ties neckwear",
@@ -149,7 +149,7 @@ export const MOCK_OUTFIT_PILE: OutfitAnalysis = {
       color: "Dark navy",
       pattern: "Blue geometric lattice (Hugo Boss)",
       brand: "Hugo Boss",
-      customization_intent: "Best match for navy suit — recolour to burgundy",
+      customization_intent: "Best match for navy suit — add 'join fleek' embroidery",
       image_url: "/demo/tie-boss.png",
       fleek_lookup: {
         search_term: "Hugo Boss ties neckwear",
@@ -198,7 +198,7 @@ export function buildDemoCurateResult(params: {
 
 export function analysisFromText(text: string): OutfitAnalysis {
   const lower = text.toLowerCase();
-  if (lower.includes("tie") && (lower.includes("boss") || lower.includes("burgundy"))) {
+  if (lower.includes("tie") && (lower.includes("boss") || lower.includes("fleek") || lower.includes("embroid"))) {
     return { ...MOCK_OUTFIT_TIE, summary: text };
   }
   if (lower.includes("pile") || lower.includes("bundle") || lower.includes("select")) {

@@ -25,7 +25,8 @@ def build_edit_instruction(
         return _fallback_instruction(description, base_intent)
 
     system = (
-        "You write image-edit instructions for clothing product photos on Fleek. "
+        "You write image-edit instructions for clothing product photos on Fleek (joinfleek.com). "
+        "Support colour changes, embroidery, and added branding. "
         "Output JSON only: "
         '{"edit_instruction": "...", "preserve": ["pattern", "logo", ...]}'
     )
