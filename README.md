@@ -46,7 +46,7 @@ Determines whether input is **text** or **image**, then returns a structured des
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # optional: add OPENAI_API_KEY for smarter descriptions
+cp .env.example .env   # add GEMINI_API_KEY when ready
 python main.py
 ```
 
@@ -60,7 +60,19 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-Site: http://localhost:3000
+Site: http://localhost:3000 — **demo mode works without the API** (Hugo Boss tie / suit scenarios built in).
+
+When your classifier is ready, set `NEXT_PUBLIC_DEMO_MODE=false` in `web/.env.local`.
+
+## AI stack (all Gemini)
+
+| Step | Model | Purpose |
+|------|-------|---------|
+| Part 1 | `gemini-2.5-flash-lite` | Classify, describe outfit, JSON + Fleek lookup |
+| Part 2a | `gemini-2.5-flash-lite` | Reasoning — edit instruction, what to preserve |
+| Part 2b | `gemini-2.0-flash-preview-image-generation` | Image edit (Banana) — colour / pattern changes |
+
+Two prompts for Part 2: one for **what to change** (JSON), one for **image edit** (Banana).
 
 ### Example — text prompt
 
