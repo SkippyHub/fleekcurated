@@ -20,6 +20,10 @@ class MockProduct(BaseModel):
     price: str
     url: str
     image_url: str
+    price_amount: float | None = None
+    price_currency: str = "USD"
+    unit: str = "bundle"
+    pieces: int | None = None
 
 
 class MockCatalogue(BaseModel):

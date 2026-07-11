@@ -1,24 +1,39 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { curate, customizeProduct } from "@/lib/api";
 import { DEMO_SCENARIOS } from "@/lib/demo";
-import { defaultSelectedItem } from "@/lib/mock-data";
+import {
+  analysisFromDemoScenario,
+  defaultSelectedItem,
+  selectedItemLabel,
+} from "@/lib/mock-data";
+import { buildCohesiveOutfit, outfitHasMultipleSlots } from "@/lib/outfit-matcher";
 import type { CurateResult } from "@/lib/types";
+import ExtractedItemsPanel from "./ExtractedItemsPanel";
 import OutfitItemCard from "./OutfitItemCard";
+import OutfitRemerge from "./OutfitRemerge";
+import OrderReview from "./OrderReview";
 
 type InputMode = "text" | "image" | "demo";
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 const TIE_PRODUCT_ID = "fleek-hugo-boss-tie";
+
+function resolveProductId(result: CurateResult): string {
+  const id = result.matched_product.product_id;
+  if (id.startsWith("fleek-")) return id;
+  if (id === "tie" || id === "tie-selected") return TIE_PRODUCT_ID;
+  return TIE_PRODUCT_ID;
+}
 
 export default function CuratorStudio() {
   const [step, setStep] = useState<Step>(1);
   const [mode, setMode] = useState<InputMode>("demo");
-  const [demoScenario, setDemoScenario] = useState<keyof typeof DEMO_SCENARIOS>("tie");
+  const [demoScenario, setDemoScenario] = useState<keyof typeof DEMO_SCENARIOS>("suit");
   const [text, setText] = useState("");
   const [customPrompt, setCustomPrompt] = useState(
-    "Add elegant embroidered branding that reads 'join fleek' on the tie. Keep the original blue colour, geometric pattern, and Hugo Boss logo. Make the embroidery look premium and subtle."
+    "Add elegant embroidered branding that reads 'join fleek' on the tie make the branding stand out. Keep the original blue colour, geometric pattern, and Hugo Boss logo. Make the embroidery look premium and subtle."
   );
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -28,6 +43,27 @@ export default function CuratorStudio() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CurateResult | null>(null);
   const [source, setSource] = useState<"demo" | "api">("demo");
+
+  const previewAnalysis = useMemo(() => {
+    if (mode !== "demo") return null;
+    return analysisFromDemoScenario(demoScenario);
+  }, [mode, demoScenario]);
+
+  useEffect(() => {
+    if (mode === "demo" && previewAnalysis) {
+      const nextId = defaultSelectedItem(previewAnalysis.items);
+      setSelectedItemId(nextId);
+    }
+  }, [mode, demoScenario, previewAnalysis]);
+
+  const activeAnalysis = result?.analysis ?? previewAnalysis;
+  const cohesiveOutfit = useMemo(() => {
+    if (!activeAnalysis || !outfitHasMultipleSlots(activeAnalysis)) return null;
+    return buildCohesiveOutfit(activeAnalysis);
+  }, [activeAnalysis]);
+
+  const sourceOutfitImage =
+    mode === "demo" ? DEMO_SCENARIOS[demoScenario].image : preview ?? undefined;
 
   const onImageChange = useCallback(
     (file: File | null) => {
@@ -52,7 +88,7 @@ export default function CuratorStudio() {
       setResult(data);
       setSource(src);
       setSelectedItemId(itemId ?? defaultSelectedItem(data.analysis.items));
-      setStep(itemId ? 3 : 2);
+      setStep(outfitHasMultipleSlots(data.analysis) ? 3 : 2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -75,13 +111,18 @@ export default function CuratorStudio() {
 
   function handleItemSelect(itemId: string) {
     setSelectedItemId(itemId);
-    setStep(3);
+    setStep(4);
+    const items = result?.analysis.items ?? previewAnalysis?.items ?? [];
+    const item = items.find((i) => i.id === itemId);
+    if (item?.customization_intent) {
+      setCustomPrompt(item.customization_intent);
+    }
   }
 
   async function handleGenerateAlteration() {
     setAltering(true);
     setError(null);
-    setStep(3);
+    setStep(4);
     try {
       const { data } = await customizeProduct({
         productId: TIE_PRODUCT_ID,
@@ -129,6 +170,7 @@ export default function CuratorStudio() {
         ...mapped,
       }));
       setSource("api");
+      setStep(5);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Alteration failed.");
     } finally {
@@ -142,6 +184,23 @@ export default function CuratorStudio() {
     setError(null);
   }
 
+  function handlePreviewItemSelect(itemId: string) {
+    setSelectedItemId(itemId);
+    const items = previewAnalysis?.items ?? [];
+    const item = items.find((i) => i.id === itemId);
+    if (item?.customization_intent) {
+      setCustomPrompt(item.customization_intent);
+    }
+  }
+
+  const displayItems = result?.analysis.items ?? previewAnalysis?.items ?? [];
+  const activeItemLabel = selectedItemLabel(displayItems, selectedItemId);
+  const primaryScenario = DEMO_SCENARIOS.suit;
+  const altScenarios = (Object.entries(DEMO_SCENARIOS) as [
+    keyof typeof DEMO_SCENARIOS,
+    (typeof DEMO_SCENARIOS)[keyof typeof DEMO_SCENARIOS],
+  ][]).filter(([key]) => key !== "suit");
+
   const demoImage = mode === "demo" ? DEMO_SCENARIOS[demoScenario].image : preview;
   const showDemoPreview = mode === "demo" || (mode === "image" && preview);
 
@@ -149,26 +208,34 @@ export default function CuratorStudio() {
     <div className="mx-auto max-w-6xl px-6 pb-16">
       {/* Step indicator */}
       <div className="mb-8 flex items-center gap-2 text-sm">
-        {([1, 2, 3] as Step[]).map((s) => (
+        {([1, 2, 3, 4, 5] as Step[]).map((s) => (
           <div key={s} className="flex items-center gap-2">
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                step >= s ? "bg-lime-400 text-black" : "bg-white/10 text-zinc-500"
+                step >= s ? "bg-tiger-gold text-charred-clove" : "bg-fleek-border text-fleek-muted"
               }`}
             >
               {s}
             </span>
-            <span className={step >= s ? "text-zinc-300" : "text-zinc-600"}>
-              {s === 1 ? "Input" : s === 2 ? "Analyse & lookup" : "Customise"}
+            <span className={`hidden sm:inline ${step >= s ? "font-medium text-fleek-text" : "text-fleek-muted"}`}>
+              {s === 1
+                ? "Input"
+                : s === 2
+                  ? "Extract"
+                  : s === 3
+                    ? "Match"
+                    : s === 4
+                      ? "Customise"
+                      : "Order"}
             </span>
-            {s < 3 && <span className="mx-1 text-zinc-700">/</span>}
+            {s < 5 && <span className="mx-1 text-fleek-border">/</span>}
           </div>
         ))}
         {result && (
           <button
             type="button"
             onClick={reset}
-            className="ml-auto text-xs text-zinc-500 hover:text-zinc-300"
+            className="ml-auto text-xs text-fleek-muted hover:text-fleek-text"
           >
             Start over
           </button>
@@ -178,13 +245,14 @@ export default function CuratorStudio() {
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Left — input */}
         <section className="lg:col-span-2">
-          <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 sm:p-7">
-            <h3 className="text-lg font-semibold">1. Your brief</h3>
-            <p className="mt-1 text-sm text-zinc-500">
-              Demo works offline. Classifier API plugs in later.
+          <div className="surface-card rounded-md p-6 sm:p-7">
+            <h3 className="text-lg font-semibold">1. Outfit input</h3>
+            <p className="mt-1 text-sm text-fleek-muted">
+              Upload a full outfit photo. We extract each piece, match Fleek bundles, then
+              customise your selection.
             </p>
 
-            <div className="mt-5 flex gap-1 rounded-full bg-white/5 p-1">
+            <div className="mt-4 flex gap-1 rounded-full bg-fleek-bg p-1 border border-fleek-border">
               {(
                 [
                   ["demo", "Demo"],
@@ -198,8 +266,8 @@ export default function CuratorStudio() {
                   onClick={() => setMode(tab)}
                   className={`flex-1 rounded-full px-3 py-2 text-xs font-medium transition sm:text-sm ${
                     mode === tab
-                      ? "bg-lime-400 text-black"
-                      : "text-zinc-400 hover:text-white"
+                      ? "bg-tiger-gold text-charred-clove"
+                      : "text-fleek-muted hover:text-fleek-text"
                   }`}
                 >
                   {label}
@@ -209,40 +277,94 @@ export default function CuratorStudio() {
 
             <form onSubmit={handleAnalyze} className="mt-5 space-y-4">
               {mode === "demo" && (
-                <div className="space-y-3">
-                  {(
-                    Object.entries(DEMO_SCENARIOS) as [
-                      keyof typeof DEMO_SCENARIOS,
-                      (typeof DEMO_SCENARIOS)[keyof typeof DEMO_SCENARIOS],
-                    ][]
-                  ).map(([key, s]) => (
-                    <label
-                      key={key}
-                      className={`flex cursor-pointer gap-3 rounded-xl border p-3 transition ${
-                        demoScenario === key
-                          ? "border-lime-400/40 bg-lime-400/5"
-                          : "border-white/8 hover:border-white/15"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="demo"
-                        checked={demoScenario === key}
-                        onChange={() => setDemoScenario(key)}
-                        className="mt-1"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{s.label}</p>
-                        <p className="text-xs text-zinc-500">{s.caption}</p>
+                <div className="space-y-4">
+                  <label
+                    className={`block cursor-pointer overflow-hidden rounded-md border transition ${
+                      demoScenario === "suit"
+                        ? "border-tiger-gold/50 bg-tiger-gold/5 ring-1 ring-tiger-gold/20"
+                        : "border-fleek-border hover:border-tiger-gold/30"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="demo"
+                      checked={demoScenario === "suit"}
+                      onChange={() => setDemoScenario("suit")}
+                      className="sr-only"
+                    />
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-tiger-gold">
+                            Recommended demo
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-fleek-text">
+                            {primaryScenario.label}
+                          </p>
+                          <p className="mt-0.5 text-xs text-fleek-muted">{primaryScenario.caption}</p>
+                        </div>
                       </div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={s.image}
-                        alt=""
-                        className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                        src={primaryScenario.image}
+                        alt="Model in blue suit"
+                        className="mt-3 w-full rounded-md object-cover max-h-44"
                       />
-                    </label>
-                  ))}
+                    </div>
+                  </label>
+
+                  {previewAnalysis && demoScenario === "suit" && (
+                    <ExtractedItemsPanel
+                      items={previewAnalysis.items}
+                      selectedId={selectedItemId}
+                      onSelect={handlePreviewItemSelect}
+                    />
+                  )}
+
+                  <div>
+                    <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-fleek-muted">
+                      Also try
+                    </p>
+                    <div className="space-y-2">
+                      {altScenarios.map(([key, s]) => (
+                        <label
+                          key={key}
+                          className={`flex cursor-pointer gap-3 rounded-md border p-2.5 transition ${
+                            demoScenario === key
+                              ? "border-tiger-gold/40 bg-tiger-gold/5"
+                              : "border-fleek-border hover:border-tiger-gold/30"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="demo"
+                            checked={demoScenario === key}
+                            onChange={() => setDemoScenario(key)}
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-fleek-text">{s.label}</p>
+                            <p className="text-xs text-fleek-muted">{s.caption}</p>
+                          </div>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={s.image}
+                            alt=""
+                            className="h-12 w-12 shrink-0 rounded-md object-cover"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {previewAnalysis && demoScenario !== "suit" && (
+                    <ExtractedItemsPanel
+                      items={previewAnalysis.items}
+                      selectedId={selectedItemId}
+                      onSelect={handlePreviewItemSelect}
+                      compact
+                    />
+                  )}
                 </div>
               )}
 
@@ -252,13 +374,13 @@ export default function CuratorStudio() {
                   onChange={(e) => setText(e.target.value)}
                   rows={4}
                   placeholder="e.g. Add embroidered 'join fleek' branding on this Hugo Boss tie"
-                  className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm placeholder:text-zinc-600 focus:border-lime-400/50 focus:outline-none"
+                  className="input-fleek w-full resize-none rounded-md px-4 py-3 text-sm placeholder:text-fleek-muted"
                 />
               )}
 
               {mode === "image" && (
-                <label className="flex cursor-pointer flex-col items-center rounded-xl border border-dashed border-white/12 bg-black/30 px-4 py-8 hover:border-lime-400/30">
-                  <span className="text-sm text-zinc-400">Drop outfit or product photo</span>
+                <label className="flex cursor-pointer flex-col items-center rounded-md border border-dashed border-fleek-border bg-fleek-bg px-4 py-8 hover:border-tiger-gold/40">
+                  <span className="text-sm text-fleek-muted">Drop outfit or product photo</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -268,7 +390,7 @@ export default function CuratorStudio() {
                 </label>
               )}
 
-              {showDemoPreview && (
+              {showDemoPreview && mode !== "demo" && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={demoImage ?? undefined}
@@ -278,19 +400,19 @@ export default function CuratorStudio() {
               )}
 
               <label className="block">
-                <span className="mb-2 block text-xs uppercase tracking-wider text-zinc-500">
-                  Customisation prompt (Part 2)
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-fleek-muted">
+                  Customise {activeItemLabel.toLowerCase()}
                 </span>
                 <textarea
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
                   rows={2}
-                  className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400/50 focus:outline-none"
+                  className="input-fleek w-full resize-none rounded-md px-4 py-3 text-sm"
                 />
               </label>
 
               {error && (
-                <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                <p className="rounded-lg bg-chili-red/10 px-3 py-2 text-sm text-chili-red">
                   {error}
                 </p>
               )}
@@ -298,9 +420,9 @@ export default function CuratorStudio() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-full bg-lime-400 py-3 text-sm font-semibold text-black hover:bg-lime-300 disabled:opacity-50"
+                className="w-full rounded-full bg-tiger-gold py-3 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90 disabled:opacity-50"
               >
-                {loading ? "Analysing…" : "Analyse outfit"}
+                {loading ? "Extracting pieces…" : "Extract & match Fleek bundles"}
               </button>
             </form>
           </div>
@@ -309,29 +431,29 @@ export default function CuratorStudio() {
         {/* Right — results */}
         <section className="space-y-4 lg:col-span-3">
           {/* Part 1 */}
-          <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 sm:p-7">
+          <div className="surface-card rounded-md p-6 sm:p-7">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">2. Classifier output</h3>
+              <h3 className="text-lg font-semibold">2. Extract pieces</h3>
               {result && (
-                <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] uppercase text-zinc-400">
+                <span className="rounded-full bg-fleek-bg border border-fleek-border px-2 py-0.5 text-[10px] font-medium uppercase text-fleek-muted">
                   {source} mode
                 </span>
               )}
             </div>
 
             {!result && !loading && (
-              <p className="mt-4 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-fleek-muted">
                 Structured outfit JSON and Fleek lookups appear here.
               </p>
             )}
 
             {loading && (
               <div className="mt-4 space-y-3 animate-pulse">
-                <div className="h-4 w-1/4 rounded bg-white/10" />
-                <div className="h-20 rounded bg-white/10" />
+                <div className="h-4 w-1/4 rounded bg-fleek-border" />
+                <div className="h-20 rounded bg-fleek-border" />
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="h-32 rounded bg-white/10" />
-                  <div className="h-32 rounded bg-white/10" />
+                  <div className="h-32 rounded bg-fleek-border" />
+                  <div className="h-32 rounded bg-fleek-border" />
                 </div>
               </div>
             )}
@@ -339,19 +461,19 @@ export default function CuratorStudio() {
             {result && (
               <div className="mt-4 space-y-4">
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full bg-lime-400/15 px-3 py-1 text-xs uppercase text-lime-300">
+                  <span className="rounded-full bg-tiger-gold/15 px-3 py-1 text-xs font-semibold uppercase text-fleek-text">
                     {result.analysis.input_type}
                   </span>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-fleek-muted">
                     {Math.round(result.analysis.confidence * 100)}% confidence
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-zinc-300">
+                <p className="text-sm leading-relaxed text-fleek-text">
                   {result.analysis.summary}
                 </p>
 
-                <p className="text-xs uppercase tracking-wider text-zinc-500">
-                  Items — tap to customise
+                <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
+                  Extracted items — tap to customise
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {result.analysis.items.map((item) => (
@@ -364,11 +486,11 @@ export default function CuratorStudio() {
                   ))}
                 </div>
 
-                <details className="rounded-xl bg-black/40 p-4">
-                  <summary className="cursor-pointer text-xs text-zinc-500">
+                <details className="rounded-md border border-fleek-border bg-fleek-bg p-4">
+                  <summary className="cursor-pointer text-xs text-fleek-muted">
                     View raw JSON (classifier contract)
                   </summary>
-                  <pre className="mt-3 overflow-x-auto text-[11px] text-zinc-400">
+                  <pre className="mt-3 overflow-x-auto text-[11px] text-fleek-muted">
                     {JSON.stringify(result.analysis, null, 2)}
                   </pre>
                 </details>
@@ -376,32 +498,53 @@ export default function CuratorStudio() {
             )}
           </div>
 
+          {cohesiveOutfit && (
+            <OutfitRemerge
+              outfit={cohesiveOutfit}
+              sourceImage={sourceOutfitImage}
+              selectedItemId={selectedItemId}
+              onSelectItem={handleItemSelect}
+              customizedItemId={
+                result?.customization.status === "generated" ||
+                result?.customization.status === "cached"
+                  ? result.customization.item_id
+                  : undefined
+              }
+              customizedImageUrl={
+                result?.customization.status === "generated" ||
+                result?.customization.status === "cached"
+                  ? result.customization.customized_image_url
+                  : undefined
+              }
+            />
+          )}
+
           {/* Part 2 */}
-          <div className="rounded-2xl border border-lime-400/20 bg-lime-400/[0.03] p-6 sm:p-7">
-            <h3 className="text-lg font-semibold">3. AI alteration (Gemini Banana)</h3>
-            <p className="mt-1 text-sm text-zinc-500">
-              Part 2 — calls <code className="text-lime-300/80">POST /customize</code> with your prompt
+          <div className="surface-accent rounded-md p-6 sm:p-7">
+            <h3 className="text-lg font-semibold text-fleek-text">4. AI alteration (Gemini Banana)</h3>
+            <p className="mt-1 text-sm text-fleek-muted">
+              Part 2 — calls <code className="rounded bg-fleek-surface px-1 text-fleek-text">POST /customize</code> with your prompt
             </p>
 
             <button
               type="button"
               onClick={handleGenerateAlteration}
               disabled={altering}
-              className="mt-4 w-full rounded-full bg-lime-400 py-3 text-sm font-semibold text-black hover:bg-lime-300 disabled:opacity-50"
+              className="mt-4 w-full rounded-full bg-tiger-gold py-3 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90 disabled:opacity-50"
             >
-              {altering ? "Generating with Gemini…" : "Generate tie alteration"}
+              {altering ? "Generating with Gemini…" : `Generate ${activeItemLabel.toLowerCase()} alteration`}
             </button>
 
             {!result && !altering && (
-              <p className="mt-4 text-sm text-zinc-600">
+              <p className="mt-4 text-sm text-fleek-muted">
                 Uses Hugo Boss tie + your customisation prompt above.
               </p>
             )}
 
             {altering && (
               <div className="mt-4 space-y-3 animate-pulse">
-                <div className="h-40 rounded bg-white/10" />
-                <div className="h-40 rounded bg-white/10" />
+                <div className="h-40 rounded bg-fleek-border" />
+                <div className="h-40 rounded bg-fleek-border" />
               </div>
             )}
 
@@ -409,52 +552,57 @@ export default function CuratorStudio() {
               <div className="mt-5 space-y-5">
                 <span
                   className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase ${
-                    result.customization.status === "generated"
-                      ? "bg-lime-400/20 text-lime-300"
+                    result.customization.status === "generated" ||
+                    result.customization.status === "cached"
+                      ? "bg-tiger-gold/20 text-tiger-gold"
                       : result.customization.status === "quota_exceeded"
-                        ? "bg-red-400/15 text-red-300"
-                        : "bg-amber-400/15 text-amber-200"
+                        ? "bg-chili-red/15 text-chili-red"
+                        : "bg-tiger-gold/15 text-fleek-text"
                   }`}
                 >
-                  {result.customization.status}
+                  {result.customization.status === "cached" ? "cached (no API cost)" : result.customization.status}
                 </span>
 
                 {result.customization.edit_instruction && (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-fleek-muted">
                     Edit: {result.customization.edit_instruction}
                   </p>
                 )}
                 {result.customization.error && (
-                  <p className="text-sm text-red-300">{result.customization.error}</p>
+                  <p className="text-sm text-chili-red">{result.customization.error}</p>
                 )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <ImageCompare label="Original" src={result.customization.original_image_url} />
                   <ImageCompare
                     label={
-                      result.customization.status === "generated"
-                        ? "Customised (Gemini)"
+                      result.customization.status === "generated" ||
+                      result.customization.status === "cached"
+                        ? result.customization.status === "cached"
+                          ? "Customised (cached)"
+                          : "Customised (Gemini)"
                         : "Customised"
                     }
                     src={result.customization.customized_image_url}
                     demoTint={
                       result.customization.status !== "generated" &&
+                      result.customization.status !== "cached" &&
                       source === "demo"
                     }
                   />
                 </div>
 
-                <div className="rounded-xl border border-white/8 bg-black/40 p-5">
-                  <p className="text-xs uppercase tracking-wider text-zinc-500">
+                <div className="surface-card rounded-md p-5">
+                  <p className="text-xs font-medium uppercase tracking-wider text-fleek-muted">
                     Matched Fleek bundle
                   </p>
-                  <p className="mt-2 text-lg font-medium">{result.matched_product.title}</p>
-                  <p className="text-lime-300">{result.matched_product.price}</p>
+                  <p className="mt-2 text-lg font-semibold text-fleek-text">{result.matched_product.title}</p>
+                  <p className="font-semibold text-tiger-gold">{result.matched_product.price}</p>
                   <a
                     href={result.matched_product.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-lime-400 px-5 py-2.5 text-sm font-semibold text-black hover:bg-lime-300"
+                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-tiger-gold px-5 py-2.5 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90"
                   >
                     View on joinfleek.com →
                   </a>
@@ -462,6 +610,15 @@ export default function CuratorStudio() {
               </div>
             )}
           </div>
+
+          {result && !altering && (
+            <OrderReview
+              productId={resolveProductId(result)}
+              customizationPrompt={customPrompt}
+              productTitle={result.matched_product.title}
+              productUrl={result.matched_product.url}
+            />
+          )}
         </section>
       </div>
     </div>
@@ -479,8 +636,8 @@ function ImageCompare({
 }) {
   return (
     <div>
-      <p className="mb-2 text-xs uppercase tracking-wider text-zinc-500">{label}</p>
-      <div className="relative overflow-hidden rounded-xl bg-zinc-900">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-fleek-muted">{label}</p>
+      <div className="relative overflow-hidden rounded-md border border-fleek-border bg-fleek-bg">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
@@ -488,7 +645,7 @@ function ImageCompare({
           className={`aspect-[4/5] w-full object-cover ${demoTint ? "hue-rotate-[320deg] saturate-150" : ""}`}
         />
         {demoTint && (
-          <span className="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-0.5 text-[10px] text-zinc-400">
+          <span className="absolute bottom-2 right-2 rounded bg-fleek-surface/90 px-2 py-0.5 text-[10px] text-fleek-muted shadow-sm">
             CSS demo tint
           </span>
         )}

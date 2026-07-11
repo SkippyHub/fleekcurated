@@ -7,19 +7,25 @@ export const DEMO_SCENARIOS = {
     id: "model-suit",
     label: "Model in blue suit",
     image: "/demo/model-suit.png",
-    caption: "Describe this outfit and find Fleek bundles for each piece",
+    caption: "Full outfit — extract jacket, shirt, trousers & tie, match each to Fleek",
+    primary: true,
+    flow: "extract" as const,
   },
   tie: {
     id: "tie-boss",
-    label: "Hugo Boss tie",
+    label: "Tie close-up (extracted)",
     image: "/demo/tie-boss.png",
-    caption: "Add embroidered 'join fleek' branding — keep the geometric pattern",
+    caption: "Crop from the suit photo — ready for join fleek embroidery",
+    primary: false,
+    flow: "customize" as const,
   },
   pile: {
     id: "tie-pile",
-    label: "Designer tie bundle",
+    label: "Wholesale tie pile",
     image: "/demo/tie-pile.png",
-    caption: "Pick the best Hugo Boss tie from this pile for a navy suit",
+    caption: "Pick the best Hugo Boss tie from a Fleek bundle",
+    primary: false,
+    flow: "select" as const,
   },
 } as const;
 
@@ -27,18 +33,18 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
   input_type: "image",
   confidence: 0.94,
   summary:
-    "Sharp business-formal ensemble: mid-blue textured suit, light blue dress shirt, dark blue geometric tie, pocket square and leather belt.",
+    "Sharp business-formal ensemble: mid-blue textured suit jacket and trousers, light blue dress shirt, dark blue geometric tie, pocket square and leather belt.",
   items: [
     {
-      id: "suit",
-      label: "Suit",
-      type: "Two-piece suit",
+      id: "jacket",
+      label: "Jacket",
+      type: "Suit jacket",
       color: "Mid-to-dark blue",
       pattern: "Crosshatch / linen-like slub texture",
       brand: "Formal menswear",
-      details: "Single-breasted jacket, notched lapels, creased trousers",
+      details: "Single-breasted, notched lapels",
       fleek_lookup: {
-        search_term: "Hugo Boss suit menswear",
+        search_term: "Hugo Boss suit jacket menswear",
         relevant_bundles: [
           {
             title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
@@ -66,6 +72,25 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
           {
             title: "Hugo Boss Polos and T-Shirt",
             url: `${FLEEK}/products/hugo-boss-polos-and-t-shirt`,
+          },
+        ],
+      },
+    },
+    {
+      id: "trousers",
+      label: "Trousers",
+      type: "Dress trousers",
+      color: "Mid-to-dark blue",
+      pattern: "Matching crosshatch texture",
+      brand: "Formal menswear",
+      details: "Flat front, creased leg",
+      fleek_lookup: {
+        search_term: "Mens formal trousers wholesale",
+        relevant_bundles: [
+          {
+            title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
+            url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
+            price: "Wholesale bundle",
           },
         ],
       },
@@ -111,7 +136,7 @@ export const MOCK_OUTFIT_TIE: OutfitAnalysis = {
   input_type: "image",
   confidence: 0.97,
   summary:
-    "Hugo Boss silk tie in royal blue with white geometric diamond grid and BOSS keeper loop.",
+    "Extracted Hugo Boss silk tie — royal blue with white geometric diamond grid and BOSS keeper loop (crop from full outfit).",
   items: [
     {
       id: "tie",
@@ -186,7 +211,7 @@ export function buildDemoCurateResult(params: {
       status: "demo",
     },
     matched_product: {
-      product_id: item.id,
+      product_id: item.id === "tie" || item.id === "tie-selected" ? "fleek-hugo-boss-tie" : item.id,
       title: bundle?.title ?? `${item.brand ?? ""} ${item.type}`.trim(),
       url: bundle?.url ?? FLEEK,
       price: bundle?.price ?? "See Fleek listing",
@@ -216,5 +241,9 @@ export function analysisFromDemoScenario(
 }
 
 export function defaultSelectedItem(items: OutfitItem[]): string {
-  return items.find((i) => i.id === "tie")?.id ?? items[0]?.id ?? "";
+  return items.find((i) => i.id === "tie")?.id ?? items.find((i) => i.customization_intent)?.id ?? items[0]?.id ?? "";
+}
+
+export function selectedItemLabel(items: OutfitItem[], selectedId: string): string {
+  return items.find((i) => i.id === selectedId)?.label ?? "Item";
 }

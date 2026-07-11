@@ -5,6 +5,34 @@ export interface FleekLookup {
   relevant_bundles: { title: string; url: string; price?: string }[];
 }
 
+export interface OutfitTheme {
+  palette: string[];
+  brands: string[];
+  style: string;
+  formality: string;
+}
+
+/** One extracted slot matched to a Fleek bundle that fits the overall outfit */
+export interface MatchedOutfitSlot {
+  item_id: string;
+  label: string;
+  type: string;
+  color?: string;
+  image_url?: string;
+  bundle: { title: string; url: string; price?: string };
+  match_score: number;
+  cohesion_note: string;
+}
+
+/** Full outfit re-merged from individually matched, style-coherent Fleek bundles */
+export interface CohesiveOutfit {
+  theme: OutfitTheme;
+  slots: MatchedOutfitSlot[];
+  cohesion_score: number;
+  summary: string;
+  anchor_brand: string | null;
+}
+
 export interface OutfitItem {
   id: string;
   label: string;
@@ -31,7 +59,7 @@ export interface CustomizationResult {
   customized_image_url: string;
   prompt_used: string;
   edit_instruction?: string | null;
-  status: "demo" | "mock" | "generated" | "quota_exceeded" | "error";
+  status: "demo" | "mock" | "generated" | "cached" | "quota_exceeded" | "error";
   error?: string | null;
 }
 
@@ -42,6 +70,39 @@ export interface ProductMatch {
   price: string;
   image_url: string;
   match_score: number;
+}
+
+export interface PriceLineItem {
+  label: string;
+  amount: number;
+  currency: string;
+  kind: "bundle" | "customization" | "discount" | "shipping";
+  detail?: string | null;
+}
+
+export interface PriceEstimate {
+  line_items: PriceLineItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  currency: string;
+  api_cost_gbp: number;
+  customization_fee_gbp: number;
+  bundle_price_gbp: number;
+  promo_applied?: string | null;
+  notes: string[];
+}
+
+export interface MockOrder {
+  order_id: string;
+  status: "draft" | "confirmed" | "redirected";
+  product_id: string;
+  product_title: string;
+  customization_prompt: string;
+  estimate: PriceEstimate;
+  checkout_url: string;
+  created_at: string;
+  message: string;
 }
 
 export interface CurateResult {
@@ -99,4 +160,13 @@ export interface ApiCurateResponse {
 export interface ApiCustomizeResponse {
   customization: ApiCurateResponse["customization"];
   matched_product: ProductMatch;
+}
+
+export interface ApiEstimateResponse {
+  product_id: string;
+  estimate: PriceEstimate;
+}
+
+export interface ApiOrderResponse {
+  order: MockOrder;
 }

@@ -3,10 +3,14 @@
   "products": [
     {
       "id": "fleek-hugo-boss-tie",
-      "title": "Hugo Boss Designer Tie",
+      "title": "Designer Ties Bundle (500 pcs)",
       "category": "tie",
       "style_tags": ["formal", "designer", "hugo-boss"],
       "price": "Wholesale bundle",
+      "price_amount": 415,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 500,
       "url": "https://www.joinfleek.com/products/designer-ties-bundle-set-of-500",
       "image_url": "/demo/tie-boss.png"
     },
@@ -16,6 +20,10 @@
       "category": "t-shirt",
       "style_tags": ["y2k", "vintage", "streetwear"],
       "price": "$103",
+      "price_amount": 103,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 10,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop"
     },
@@ -25,6 +33,10 @@
       "category": "hoodie",
       "style_tags": ["streetwear", "casual"],
       "price": "$119",
+      "price_amount": 119,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 10,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=800&fit=crop"
     },
@@ -34,6 +46,10 @@
       "category": "t-shirt",
       "style_tags": ["preppy", "vintage"],
       "price": "$151",
+      "price_amount": 151,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 10,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1586790170083-2f9eceb11401?w=600&h=800&fit=crop"
     },
@@ -43,6 +59,10 @@
       "category": "jeans",
       "style_tags": ["vintage", "denim"],
       "price": "$109",
+      "price_amount": 109,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 10,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&h=800&fit=crop"
     },
@@ -52,6 +72,10 @@
       "category": "jacket",
       "style_tags": ["workwear", "vintage", "streetwear"],
       "price": "$409",
+      "price_amount": 409,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 15,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1551028718-00167b16eac5?w=600&h=800&fit=crop"
     },
@@ -61,6 +85,10 @@
       "category": "shorts",
       "style_tags": ["athleisure", "sporty"],
       "price": "$135",
+      "price_amount": 135,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 10,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1506629082955-511b2f4c2c8b?w=600&h=800&fit=crop"
     }

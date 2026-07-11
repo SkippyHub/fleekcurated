@@ -1,32 +1,5 @@
-"""Shared Gemini client helpers."""
+"""Re-export shared Gemini client from Part 1."""
 
-from __future__ import annotations
+from part1_classifier.gemini_client import get_api_key, get_client, image_model, text_model
 
-import os
-from functools import lru_cache
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-def get_api_key() -> str | None:
-    return os.getenv("GEMINI_API_KEY")
-
-
-@lru_cache
-def get_client():
-    from google import genai
-
-    key = get_api_key()
-    if not key:
-        return None
-    return genai.Client(api_key=key)
-
-
-def text_model() -> str:
-    return os.getenv("GEMINI_REASONING_MODEL", "gemini-3.1-flash-lite")
-
-
-def image_model() -> str:
-    return os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
+__all__ = ["get_api_key", "get_client", "image_model", "text_model"]

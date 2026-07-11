@@ -24,7 +24,7 @@ def test_curate_text_pipeline():
     )
     assert result.analysis.classification.input_type == InputType.TEXT
     assert result.customization.product_id == "fleek-hugo-boss-tie"
-    assert result.customization.status in ("generated", "quota_exceeded", "error", "mock")
+    assert result.customization.status in ("generated", "cached", "quota_exceeded", "error", "mock")
 
 
 def test_analyze_still_works():

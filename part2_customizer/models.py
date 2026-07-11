@@ -11,7 +11,7 @@ class CustomizationResult(BaseModel):
     customized_image_url: str
     prompt_used: str
     edit_instruction: str | None = None
-    status: str = Field(description="mock | generated | quota_exceeded | error")
+    status: str = Field(description="mock | generated | cached | quota_exceeded | error")
     error: str | None = None
 
 
@@ -22,6 +22,39 @@ class ProductMatch(BaseModel):
     price: str
     image_url: str
     match_score: float = Field(ge=0.0, le=1.0)
+
+
+class PriceLineItem(BaseModel):
+    label: str
+    amount: float
+    currency: str = "GBP"
+    kind: str = Field(description="bundle | customization | discount | shipping")
+    detail: str | None = None
+
+
+class PriceEstimate(BaseModel):
+    line_items: list[PriceLineItem]
+    subtotal: float
+    discount: float = 0.0
+    total: float
+    currency: str = "GBP"
+    api_cost_gbp: float = 0.0
+    customization_fee_gbp: float = 0.0
+    bundle_price_gbp: float = 0.0
+    promo_applied: str | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
+class MockOrder(BaseModel):
+    order_id: str
+    status: str = Field(description="draft | confirmed | redirected")
+    product_id: str
+    product_title: str
+    customization_prompt: str
+    estimate: PriceEstimate
+    checkout_url: str
+    created_at: str
+    message: str
 
 
 class CustomizeResponse(BaseModel):
@@ -37,3 +70,12 @@ class CurateResponse(BaseModel):
     analysis: AnalyzeResponse
     customization: CustomizationResult
     matched_product: ProductMatch
+
+
+class EstimateResponse(BaseModel):
+    product_id: str
+    estimate: PriceEstimate
+
+
+class OrderResponse(BaseModel):
+    order: MockOrder

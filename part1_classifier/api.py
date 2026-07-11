@@ -15,8 +15,9 @@ from part1_classifier.classifier import classify_input
 from part1_classifier.describer import describe_prompt
 from part1_classifier.models import AnalyzeResponse, InputType
 from part2_customizer.curate_pipeline import curate
-from part2_customizer.models import CurateResponse, CustomizeResponse
+from part2_customizer.models import CurateResponse, CustomizeResponse, EstimateResponse, OrderResponse
 from part2_customizer.pipeline import customize_only
+from part2_customizer.pricing import create_mock_order, estimate_order
 
 load_dotenv()
 
@@ -81,6 +82,46 @@ async def analyze_prompt(
     )
 
     return AnalyzeResponse(classification=classification, description=description)
+
+
+@app.post("/estimate", response_model=EstimateResponse)
+async def estimate_order_endpoint(
+    product_id: str = Form(...),
+    customization_prompt: str = Form(...),
+    promo_code: Optional[str] = Form(default=None),
+    include_preview: bool = Form(default=True),
+) -> EstimateResponse:
+    """Mock pricing — bundle + AI alteration cost estimate."""
+    try:
+        estimate = estimate_order(
+            product_id=product_id,
+            customization_prompt=customization_prompt.strip(),
+            promo_code=promo_code,
+            include_preview=include_preview,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return EstimateResponse(product_id=product_id, estimate=estimate)
+
+
+@app.post("/orders/mock", response_model=OrderResponse)
+async def place_mock_order(
+    product_id: str = Form(...),
+    customization_prompt: str = Form(...),
+    promo_code: Optional[str] = Form(default=None),
+    include_preview: bool = Form(default=True),
+) -> OrderResponse:
+    """Place a mock order — returns estimate + checkout redirect to Fleek."""
+    try:
+        order = create_mock_order(
+            product_id=product_id,
+            customization_prompt=customization_prompt.strip(),
+            promo_code=promo_code,
+            include_preview=include_preview,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return OrderResponse(order=order)
 
 
 @app.post("/customize", response_model=CustomizeResponse)

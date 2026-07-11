@@ -12,6 +12,7 @@ from PIL import Image
 from part1_classifier.catalogue import get_product
 from part1_classifier.models import PromptDescription
 from part2_customizer.gemini_client import get_client, image_model
+from part2_customizer.image_cache import get_cached, store_cached
 from part2_customizer.styling import build_edit_instruction
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +93,16 @@ def customize_product(
         image_path=image_path,
     )
     edit_instruction = build_edit_instruction(description, user_prompt=user_prompt)
+
+    cached = get_cached(
+        product_id,
+        edit_instruction,
+        source_bytes,
+        base_url=base_url,
+    )
+    if cached:
+        return cached
+
     original_url = _save_original_copy(source_bytes)
     original_full = f"{base_url}{original_url}"
 
@@ -129,6 +140,13 @@ def customize_product(
             raise ValueError("Gemini returned no image — try again or check quota")
 
         customized_url = _save_png(image_data, "customized")
+        store_cached(
+            product_id,
+            edit_instruction,
+            source_bytes,
+            original_rel=original_url,
+            customized_rel=customized_url,
+        )
         return {
             "product_id": product_id,
             "original_image_url": original_full,

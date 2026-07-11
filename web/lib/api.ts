@@ -1,5 +1,14 @@
 import { demoCurate, isDemoMode } from "./demo";
-import type { ApiCurateResponse, ApiCustomizeResponse, CurateResult } from "./types";
+import { demoCreateMockOrder, demoEstimateOrder } from "./pricing";
+import type {
+  ApiCurateResponse,
+  ApiCustomizeResponse,
+  ApiEstimateResponse,
+  ApiOrderResponse,
+  CurateResult,
+  MockOrder,
+  PriceEstimate,
+} from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -117,6 +126,76 @@ export async function curate(params: {
 
   const data: ApiCurateResponse = await res.json();
   return { result: mapApiResponse(data), source: "api" };
+}
+
+/** Mock pricing estimate — bundle + AI alteration cost */
+export async function estimateOrder(params: {
+  productId: string;
+  customizationPrompt: string;
+  promoCode?: string;
+  includePreview?: boolean;
+  productTitle?: string;
+  productUrl?: string;
+}): Promise<{ estimate: PriceEstimate; source: "demo" | "api" }> {
+  const apiUp = await apiReachable();
+  const useDemo = isDemoMode() && !apiUp;
+
+  if (useDemo) {
+    return {
+      estimate: demoEstimateOrder(params),
+      source: "demo",
+    };
+  }
+
+  const form = new FormData();
+  form.append("product_id", params.productId);
+  form.append("customization_prompt", params.customizationPrompt);
+  if (params.promoCode) form.append("promo_code", params.promoCode);
+  form.append("include_preview", String(params.includePreview !== false));
+
+  const res = await fetch(`${API_BASE}/estimate`, { method: "POST", body: form });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Estimate failed (${res.status})`);
+  }
+
+  const data: ApiEstimateResponse = await res.json();
+  return { estimate: data.estimate, source: "api" };
+}
+
+/** Place mock order — returns confirmation + Fleek checkout URL */
+export async function placeMockOrder(params: {
+  productId: string;
+  customizationPrompt: string;
+  promoCode?: string;
+  includePreview?: boolean;
+  productTitle?: string;
+  productUrl?: string;
+}): Promise<{ order: MockOrder; source: "demo" | "api" }> {
+  const apiUp = await apiReachable();
+  const useDemo = isDemoMode() && !apiUp;
+
+  if (useDemo) {
+    return {
+      order: demoCreateMockOrder(params),
+      source: "demo",
+    };
+  }
+
+  const form = new FormData();
+  form.append("product_id", params.productId);
+  form.append("customization_prompt", params.customizationPrompt);
+  if (params.promoCode) form.append("promo_code", params.promoCode);
+  form.append("include_preview", String(params.includePreview !== false));
+
+  const res = await fetch(`${API_BASE}/orders/mock`, { method: "POST", body: form });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Order failed (${res.status})`);
+  }
+
+  const data: ApiOrderResponse = await res.json();
+  return { order: data.order, source: "api" };
 }
 
 export { apiReachable, API_BASE };

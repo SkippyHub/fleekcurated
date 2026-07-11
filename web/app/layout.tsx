@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Fleek Curated — AI Clothing Upsell",
   description:
-    "Hackathon demo for Fleek (joinfleek.com): classify text or image prompts and customise clothing with AI.",
+    "Fleek-inspired AI upsell studio. Classify outfits, match wholesale bundles, customise with Gemini.",
 };
 
 export default function RootLayout({
