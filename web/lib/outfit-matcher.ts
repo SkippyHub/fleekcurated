@@ -1,59 +1,10 @@
 import type { CohesiveOutfit, MatchedOutfitSlot, OutfitAnalysis, OutfitItem, OutfitTheme } from "./types";
-
-const FLEEK = "https://www.joinfleek.com";
-
-/** Curated Fleek bundles keyed by slot — cohesive blue formal menswear set */
-const COHESIVE_BUNDLE_OVERRIDES: Record<
-  string,
-  { title: string; url: string; price: string }[]
-> = {
-  jacket: [
-    {
-      title: "Hugo Boss Polos and T-Shirt",
-      url: `${FLEEK}/products/hugo-boss-polos-and-t-shirt`,
-      price: "Wholesale bundle",
-    },
-    {
-      title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
-      url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
-      price: "Grade AB",
-    },
-  ],
-  shirt: [
-    {
-      title: "Hugo Boss T-Shirts Bundle 0001",
-      url: `${FLEEK}/products/hugo-boss-t-shirts0001`,
-      price: "Grade AB vintage",
-    },
-    {
-      title: "Hugo Boss Polos and T-Shirt",
-      url: `${FLEEK}/products/hugo-boss-polos-and-t-shirt`,
-      price: "Wholesale bundle",
-    },
-  ],
-  trousers: [
-    {
-      title: "Hugo Boss Polos and T-Shirt",
-      url: `${FLEEK}/products/hugo-boss-polos-and-t-shirt`,
-      price: "Matching formal line",
-    },
-  ],
-  tie: [
-    {
-      title: "Designer Ties Bundle (500 pcs)",
-      url: `${FLEEK}/products/designer-ties-bundle-set-of-500`,
-      price: "Bulk wholesale",
-    },
-  ],
-  "pocket-square": [],
-  "tie-selected": [
-    {
-      title: "Designer Ties Bundle (500 pcs)",
-      url: `${FLEEK}/products/designer-ties-bundle-set-of-500`,
-      price: "Bulk wholesale",
-    },
-  ],
-};
+import {
+  FLEEK_SLOT_BUNDLES,
+  pickBestBundle,
+  pickBestBundles,
+  type FleekBundle,
+} from "./garment-match";
 
 function inferPalette(items: OutfitItem[]): string[] {
   const colors = items.map((i) => i.color?.toLowerCase() ?? "").join(" ");
@@ -97,51 +48,43 @@ function dominantBrand(theme: OutfitTheme): string | null {
   return theme.brands.find((b) => /hugo boss|ralph lauren|carhartt|levi/i.test(b)) ?? theme.brands[0] ?? null;
 }
 
-function bundleBrandScore(title: string, brand: string | null): number {
-  if (!brand) return 0;
-  return title.toLowerCase().includes(brand.toLowerCase()) ? 0.35 : 0;
-}
-
-function bundlePaletteScore(title: string, palette: string[]): number {
-  const t = title.toLowerCase();
-  if (palette.some((p) => p.includes("Blue")) && /blue|navy|polo|formal/.test(t)) return 0.15;
-  return 0.05;
+function candidatesForItem(item: OutfitItem): FleekBundle[] {
+  const fromSlot = FLEEK_SLOT_BUNDLES[item.id] ?? [];
+  const fromLookup = item.fleek_lookup.relevant_bundles.map((b) => ({
+    title: b.title,
+    url: b.url,
+    price: b.price,
+  }));
+  // De-dupe by URL, slot bundles first (curated garment-correct)
+  const seen = new Set<string>();
+  const merged: FleekBundle[] = [];
+  for (const b of [...fromSlot, ...fromLookup]) {
+    if (seen.has(b.url)) continue;
+    seen.add(b.url);
+    merged.push(b);
+  }
+  return merged;
 }
 
 function pickCohesiveBundle(
   item: OutfitItem,
   theme: OutfitTheme,
   anchorBrand: string | null
-): { bundle: { title: string; url: string; price?: string }; score: number; note: string } | null {
-  const candidates = [
-    ...(COHESIVE_BUNDLE_OVERRIDES[item.id] ?? []),
-    ...item.fleek_lookup.relevant_bundles,
-  ];
-
+): { bundle: FleekBundle; score: number; note: string } | null {
+  const searchTerm = item.fleek_lookup.search_term;
+  const candidates = candidatesForItem(item);
   if (candidates.length === 0) return null;
 
-  let best = candidates[0];
-  let bestScore = 0;
+  const picked = pickBestBundle(candidates, item.id, item.type, searchTerm);
+  if (!picked) return null;
 
-  for (const bundle of candidates) {
-    let score = 0.45;
-    score += bundleBrandScore(bundle.title, anchorBrand);
-    score += bundleBrandScore(bundle.title, item.brand ?? null);
-    score += bundlePaletteScore(bundle.title, theme.palette);
-    if (theme.formality === "Formal" && /dress|formal|polo|suit|tie|shirt/.test(bundle.title.toLowerCase())) {
-      score += 0.1;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      best = bundle;
-    }
-  }
+  const brandMatch =
+    anchorBrand && picked.bundle.title.toLowerCase().includes(anchorBrand.toLowerCase());
+  const note = brandMatch
+    ? `${item.type} match · ${anchorBrand} line`
+    : `${item.type} match · ${theme.palette[0]?.toLowerCase() ?? "coordinated"} palette`;
 
-  const note = anchorBrand && best.title.toLowerCase().includes(anchorBrand.toLowerCase())
-    ? `Matches ${anchorBrand} anchor across outfit`
-    : `Coordinated ${theme.palette[0]?.toLowerCase() ?? "style"} palette`;
-
-  return { bundle: best, score: Math.min(bestScore, 0.98), note };
+  return { bundle: picked.bundle, score: picked.score, note };
 }
 
 export function buildCohesiveOutfit(analysis: OutfitAnalysis): CohesiveOutfit {
@@ -183,6 +126,15 @@ export function buildCohesiveOutfit(analysis: OutfitAnalysis): CohesiveOutfit {
   };
 }
 
+/** Filter lookup bundles to garment-appropriate matches only */
+export function matchedBundlesForItem(item: OutfitItem, limit = 2) {
+  const candidates = candidatesForItem(item);
+  return pickBestBundles(candidates, item.id, item.type, item.fleek_lookup.search_term, limit);
+}
+
 export function outfitHasMultipleSlots(analysis: OutfitAnalysis): boolean {
-  return analysis.items.filter((i) => i.fleek_lookup.relevant_bundles.length > 0 || COHESIVE_BUNDLE_OVERRIDES[i.id]).length > 1;
+  return analysis.items.filter((i) => {
+    const bundles = matchedBundlesForItem(i, 1);
+    return bundles.length > 0 || (FLEEK_SLOT_BUNDLES[i.id]?.length ?? 0) > 0;
+  }).length > 1;
 }

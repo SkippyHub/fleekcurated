@@ -90,6 +90,7 @@ async def estimate_order_endpoint(
     customization_prompt: str = Form(...),
     promo_code: Optional[str] = Form(default=None),
     include_preview: bool = Form(default=True),
+    quantity: int = Form(default=1),
 ) -> EstimateResponse:
     """Mock pricing — bundle + AI alteration cost estimate."""
     try:
@@ -98,6 +99,7 @@ async def estimate_order_endpoint(
             customization_prompt=customization_prompt.strip(),
             promo_code=promo_code,
             include_preview=include_preview,
+            quantity=max(1, quantity),
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -110,6 +112,7 @@ async def place_mock_order(
     customization_prompt: str = Form(...),
     promo_code: Optional[str] = Form(default=None),
     include_preview: bool = Form(default=True),
+    quantity: int = Form(default=1),
 ) -> OrderResponse:
     """Place a mock order — returns estimate + checkout redirect to Fleek."""
     try:
@@ -118,6 +121,7 @@ async def place_mock_order(
             customization_prompt=customization_prompt.strip(),
             promo_code=promo_code,
             include_preview=include_preview,
+            quantity=max(1, quantity),
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -5,7 +5,7 @@
       "id": "fleek-hugo-boss-tie",
       "title": "Designer Ties Bundle (500 pcs)",
       "category": "tie",
-      "style_tags": ["formal", "designer", "hugo-boss"],
+      "style_tags": ["formal", "designer", "hugo-boss", "neckwear"],
       "price": "Wholesale bundle",
       "price_amount": 415,
       "price_currency": "USD",
@@ -13,6 +13,58 @@
       "pieces": 500,
       "url": "https://www.joinfleek.com/products/designer-ties-bundle-set-of-500",
       "image_url": "/demo/tie-boss.png"
+    },
+    {
+      "id": "fleek-mix-neckwear",
+      "title": "Men's Mix Brand Tie & Neckwear (23 pcs)",
+      "category": "tie",
+      "style_tags": ["formal", "neckwear", "designer"],
+      "price": "Wholesale bundle",
+      "price_amount": 328,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 23,
+      "url": "https://www.joinfleek.com/products/men-s-mix-brand-tie-neckwear-23-pieces",
+      "image_url": "/demo/tie-pile.png"
+    },
+    {
+      "id": "fleek-mens-blazer-mix",
+      "title": "Men's Blazer & Suit Jacket Mix",
+      "category": "jacket",
+      "style_tags": ["formal", "menswear", "blazer", "suit"],
+      "price": "Wholesale bundle",
+      "price_amount": 420,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 15,
+      "url": "https://www.joinfleek.com/search?q=mens+blazer+suit+jacket",
+      "image_url": "/demo/model-suit.png"
+    },
+    {
+      "id": "fleek-hugo-boss-formal-shirts",
+      "title": "Hugo Boss Formal Shirts Bundle",
+      "category": "shirt",
+      "style_tags": ["formal", "hugo-boss", "dress-shirt", "menswear"],
+      "price": "Grade AB — formal line",
+      "price_amount": 185,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 10,
+      "url": "https://www.joinfleek.com/search?q=Hugo+Boss+formal+dress+shirts&options[prefix]=last",
+      "image_url": "/demo/model-suit.png"
+    },
+    {
+      "id": "fleek-mens-formal-trousers",
+      "title": "Men's Formal Trousers Mix",
+      "category": "trousers",
+      "style_tags": ["formal", "menswear", "trousers", "dress-pants"],
+      "price": "Wholesale bundle",
+      "price_amount": 195,
+      "price_currency": "USD",
+      "unit": "bundle",
+      "pieces": 12,
+      "url": "https://www.joinfleek.com/search?q=mens+formal+trousers",
+      "image_url": "/demo/model-suit.png"
     },
     {
       "id": "fleek-y2k-baby-tee",
@@ -28,23 +80,10 @@
       "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop"
     },
     {
-      "id": "fleek-black-hoodie",
-      "title": "Premium Black Hoodie Bundle",
-      "category": "hoodie",
-      "style_tags": ["streetwear", "casual"],
-      "price": "$119",
-      "price_amount": 119,
-      "price_currency": "USD",
-      "unit": "bundle",
-      "pieces": 10,
-      "url": "https://joinfleek.com",
-      "image_url": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=800&fit=crop"
-    },
-    {
       "id": "fleek-rl-polo",
       "title": "Ralph Lauren Polo T-Shirts",
       "category": "t-shirt",
-      "style_tags": ["preppy", "vintage"],
+      "style_tags": ["preppy", "vintage", "polo"],
       "price": "$151",
       "price_amount": 151,
       "price_currency": "USD",
@@ -78,19 +117,6 @@
       "pieces": 15,
       "url": "https://joinfleek.com",
       "image_url": "https://images.unsplash.com/photo-1551028718-00167b16eac5?w=600&h=800&fit=crop"
-    },
-    {
-      "id": "fleek-lulu-leggings",
-      "title": "Lululemon Leggings Mix",
-      "category": "shorts",
-      "style_tags": ["athleisure", "sporty"],
-      "price": "$135",
-      "price_amount": 135,
-      "price_currency": "USD",
-      "unit": "bundle",
-      "pieces": 10,
-      "url": "https://joinfleek.com",
-      "image_url": "https://images.unsplash.com/photo-1506629082955-511b2f4c2c8b?w=600&h=800&fit=crop"
     }
   ]
 }

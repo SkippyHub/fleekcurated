@@ -1,3 +1,4 @@
+import { matchedBundlesForItem } from "@/lib/outfit-matcher";
 import type { OutfitItem } from "@/lib/types";
 
 interface Props {
@@ -25,7 +26,7 @@ export default function ExtractedItemsPanel({
       <ul className={`space-y-2 ${compact ? "" : "max-h-64 overflow-y-auto pr-1"}`}>
         {items.map((item) => {
           const selected = selectedId === item.id;
-          const bundleCount = item.fleek_lookup.relevant_bundles.length;
+          const bundleCount = matchedBundlesForItem(item, 1).length;
           const customizable = Boolean(item.customization_intent || item.image_url);
 
           return (

@@ -5,8 +5,10 @@ import type {
   ApiCustomizeResponse,
   ApiEstimateResponse,
   ApiOrderResponse,
+  ApiOutfitItem,
   CurateResult,
   MockOrder,
+  OutfitItem,
   PriceEstimate,
 } from "./types";
 
@@ -21,14 +23,34 @@ async function apiReachable(): Promise<boolean> {
   }
 }
 
+function mapOutfitItem(item: ApiOutfitItem): OutfitItem {
+  return {
+    id: item.id,
+    label: item.label,
+    type: item.type,
+    color: item.color ?? undefined,
+    pattern: item.pattern ?? undefined,
+    brand: item.brand ?? undefined,
+    details: item.details ?? undefined,
+    customization_intent: item.customization_intent ?? undefined,
+    image_url: item.image_url ?? undefined,
+    fleek_lookup: {
+      search_term: item.fleek_search_term,
+      relevant_bundles: item.fleek_matches.map((m) => ({
+        title: m.title,
+        url: m.url,
+        price: m.price ?? undefined,
+      })),
+    },
+  };
+}
+
 function mapApiResponse(data: ApiCurateResponse): CurateResult {
   const d = data.analysis.description;
-  return {
-    analysis: {
-      input_type: data.analysis.classification.input_type,
-      confidence: data.analysis.classification.confidence,
-      summary: d.summary,
-      items: [
+  const outfit = data.analysis.outfit;
+  const items = outfit?.items.length
+    ? outfit.items.map(mapOutfitItem)
+    : [
         {
           id: "primary",
           label: d.clothing_item ?? "Item",
@@ -36,7 +58,14 @@ function mapApiResponse(data: ApiCurateResponse): CurateResult {
           customization_intent: d.customization_intent ?? undefined,
           fleek_lookup: { search_term: d.summary, relevant_bundles: [] },
         },
-      ],
+      ];
+
+  return {
+    analysis: {
+      input_type: outfit?.input_type ?? data.analysis.classification.input_type,
+      confidence: outfit?.confidence ?? data.analysis.classification.confidence,
+      summary: outfit?.summary ?? d.summary,
+      items,
     },
     customization: {
       item_id: "primary",
@@ -131,11 +160,13 @@ export async function curate(params: {
 /** Mock pricing estimate — bundle + AI alteration cost */
 export async function estimateOrder(params: {
   productId: string;
+  itemId?: string;
   customizationPrompt: string;
   promoCode?: string;
   includePreview?: boolean;
   productTitle?: string;
   productUrl?: string;
+  quantity?: number;
 }): Promise<{ estimate: PriceEstimate; source: "demo" | "api" }> {
   const apiUp = await apiReachable();
   const useDemo = isDemoMode() && !apiUp;
@@ -152,6 +183,7 @@ export async function estimateOrder(params: {
   form.append("customization_prompt", params.customizationPrompt);
   if (params.promoCode) form.append("promo_code", params.promoCode);
   form.append("include_preview", String(params.includePreview !== false));
+  form.append("quantity", String(Math.max(1, params.quantity ?? 1)));
 
   const res = await fetch(`${API_BASE}/estimate`, { method: "POST", body: form });
   if (!res.ok) {
@@ -166,11 +198,13 @@ export async function estimateOrder(params: {
 /** Place mock order — returns confirmation + Fleek checkout URL */
 export async function placeMockOrder(params: {
   productId: string;
+  itemId?: string;
   customizationPrompt: string;
   promoCode?: string;
   includePreview?: boolean;
   productTitle?: string;
   productUrl?: string;
+  quantity?: number;
 }): Promise<{ order: MockOrder; source: "demo" | "api" }> {
   const apiUp = await apiReachable();
   const useDemo = isDemoMode() && !apiUp;
@@ -187,6 +221,7 @@ export async function placeMockOrder(params: {
   form.append("customization_prompt", params.customizationPrompt);
   if (params.promoCode) form.append("promo_code", params.promoCode);
   form.append("include_preview", String(params.includePreview !== false));
+  form.append("quantity", String(Math.max(1, params.quantity ?? 1)));
 
   const res = await fetch(`${API_BASE}/orders/mock`, { method: "POST", body: form });
   if (!res.ok) {

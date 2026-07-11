@@ -91,6 +91,11 @@ export interface PriceEstimate {
   bundle_price_gbp: number;
   promo_applied?: string | null;
   notes: string[];
+  quantity?: number;
+  unit_price_gbp?: number;
+  price_per_piece_gbp?: number;
+  pieces_per_bundle?: number;
+  total_pieces?: number;
 }
 
 export interface MockOrder {
@@ -131,6 +136,37 @@ export interface PromptDescription {
 export interface AnalyzeResponse {
   classification: ClassificationResult;
   description: PromptDescription;
+  outfit?: ApiOutfitAnalysis | null;
+}
+
+export interface ApiOutfitBundle {
+  product_id?: string | null;
+  title: string;
+  url: string;
+  price?: string | null;
+  match_score?: number;
+}
+
+export interface ApiOutfitItem {
+  id: string;
+  label: string;
+  type: string;
+  color?: string | null;
+  pattern?: string | null;
+  brand?: string | null;
+  details?: string | null;
+  customization_intent?: string | null;
+  image_url?: string | null;
+  fleek_search_term: string;
+  fleek_search_url?: string | null;
+  fleek_matches: ApiOutfitBundle[];
+}
+
+export interface ApiOutfitAnalysis {
+  input_type: InputType;
+  confidence: number;
+  summary: string;
+  items: ApiOutfitItem[];
 }
 
 export interface MockProduct {

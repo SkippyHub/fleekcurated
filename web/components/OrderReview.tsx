@@ -1,29 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { estimateOrder, placeMockOrder } from "@/lib/api";
+import { formatGbp, resolvePiecePricing } from "@/lib/pricing";
 import type { MockOrder, PriceEstimate } from "@/lib/types";
 
 interface Props {
+  itemId: string;
+  itemLabel: string;
   productId: string;
   customizationPrompt: string;
   productTitle: string;
   productUrl: string;
-}
-
-function formatGbp(amount: number): string {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-  }).format(amount);
+  includePreview?: boolean;
+  compact?: boolean;
 }
 
 export default function OrderReview({
+  itemId,
+  itemLabel,
   productId,
   customizationPrompt,
   productTitle,
   productUrl,
+  includePreview = true,
+  compact = false,
 }: Props) {
+  const [quantity, setQuantity] = useState(1);
   const [promoCode, setPromoCode] = useState("APPFIRSTORDER");
   const [estimate, setEstimate] = useState<PriceEstimate | null>(null);
   const [order, setOrder] = useState<MockOrder | null>(null);
@@ -32,17 +35,30 @@ export default function OrderReview({
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"demo" | "api">("demo");
 
+  const piecePricing = useMemo(
+    () =>
+      resolvePiecePricing({
+        itemId,
+        productId,
+        productTitle,
+        productUrl,
+      }),
+    [itemId, productId, productTitle, productUrl]
+  );
+
   const loadEstimate = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const { estimate: data, source: src } = await estimateOrder({
         productId,
+        itemId,
         customizationPrompt,
         promoCode: promoCode.trim() || undefined,
-        includePreview: true,
+        includePreview,
         productTitle,
         productUrl,
+        quantity,
       });
       setEstimate(data);
       setSource(src);
@@ -51,7 +67,16 @@ export default function OrderReview({
     } finally {
       setLoading(false);
     }
-  }, [productId, customizationPrompt, promoCode, productTitle, productUrl]);
+  }, [
+    productId,
+    itemId,
+    customizationPrompt,
+    promoCode,
+    includePreview,
+    productTitle,
+    productUrl,
+    quantity,
+  ]);
 
   useEffect(() => {
     loadEstimate();
@@ -63,11 +88,13 @@ export default function OrderReview({
     try {
       const { order: data, source: src } = await placeMockOrder({
         productId,
+        itemId,
         customizationPrompt,
         promoCode: promoCode.trim() || undefined,
-        includePreview: true,
+        includePreview,
         productTitle,
         productUrl,
+        quantity,
       });
       setOrder(data);
       setEstimate(data.estimate);
@@ -79,13 +106,17 @@ export default function OrderReview({
     }
   }
 
+  const totalPieces = quantity * piecePricing.piecesPerBundle;
+
   return (
-    <div className="surface-card rounded-md p-6 sm:p-7">
-      <div className="flex items-center justify-between gap-4">
+    <div className={compact ? "mt-5 border-t border-fleek-border pt-5" : "surface-card rounded-md p-6 sm:p-7"}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-fleek-text">5. Review & order</h3>
+          <h3 className={`font-semibold text-fleek-text ${compact ? "text-base" : "text-lg"}`}>
+            {compact ? "Order this piece" : "Review & order"}
+          </h3>
           <p className="mt-1 text-sm text-fleek-muted">
-            Estimated wholesale bundle + AI alteration preview cost
+            {itemLabel} · {piecePricing.title}
           </p>
         </div>
         {estimate && (
@@ -95,7 +126,66 @@ export default function OrderReview({
         )}
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+      {/* Unit economics */}
+      <div className="mt-4 grid grid-cols-3 gap-2 rounded-md border border-fleek-border bg-fleek-bg p-3 text-center">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-fleek-muted">Per bundle</p>
+          <p className="mt-0.5 text-sm font-semibold text-fleek-text">
+            {formatGbp(piecePricing.bundleGbp)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-fleek-muted">Per piece</p>
+          <p className="mt-0.5 text-sm font-semibold text-tiger-gold">
+            {formatGbp(piecePricing.pricePerPieceGbp)}
+          </p>
+          <p className="text-[9px] text-fleek-muted">{piecePricing.piecesPerBundle} pcs MOQ</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-fleek-muted">Your order</p>
+          <p className="mt-0.5 text-sm font-semibold text-fleek-text">{totalPieces} pcs</p>
+          <p className="text-[9px] text-fleek-muted">{quantity} bundle{quantity > 1 ? "s" : ""}</p>
+        </div>
+      </div>
+
+      {/* Quantity */}
+      <div className="mt-4">
+        <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-fleek-muted">
+          How many bundles?
+        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-fleek-border bg-fleek-surface text-lg font-medium hover:border-tiger-gold/40"
+            aria-label="Decrease quantity"
+          >
+            −
+          </button>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            value={quantity}
+            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+            className="input-fleek w-20 rounded-md px-3 py-2 text-center text-sm font-semibold"
+          />
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => q + 1)}
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-fleek-border bg-fleek-surface text-lg font-medium hover:border-tiger-gold/40"
+            aria-label="Increase quantity"
+          >
+            +
+          </button>
+          <p className="text-sm text-fleek-muted">
+            = <span className="font-semibold text-fleek-text">{formatGbp(piecePricing.bundleGbp * quantity)}</span>{" "}
+            wholesale
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="flex-1">
           <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-fleek-muted">
             Promo code
@@ -140,9 +230,7 @@ export default function OrderReview({
                 <li key={i} className="flex items-start justify-between gap-4 text-sm">
                   <div>
                     <p className="text-fleek-text">{item.label}</p>
-                    {item.detail && (
-                      <p className="text-xs text-fleek-muted">{item.detail}</p>
-                    )}
+                    {item.detail && <p className="text-xs text-fleek-muted">{item.detail}</p>}
                   </div>
                   <span
                     className={`shrink-0 font-medium ${
@@ -174,29 +262,6 @@ export default function OrderReview({
             </div>
           </div>
 
-          <div className="rounded-md border border-tiger-gold/25 bg-tiger-gold/5 p-4 text-xs text-fleek-muted">
-            <p className="font-medium text-fleek-text">Gemini API cost (transparent)</p>
-            <p className="mt-1">
-              ~{formatGbp(estimate.api_cost_gbp)} per preview ·{" "}
-              <a
-                href="https://ai.google.dev/gemini-api/docs/pricing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-fleek-text hover:text-tiger-gold hover:underline"
-              >
-                Google pricing
-              </a>{" "}
-              ($0.067/image at 1K for gemini-3.1-flash-image)
-            </p>
-            {estimate.notes.length > 0 && (
-              <ul className="mt-2 list-inside list-disc space-y-0.5">
-                {estimate.notes.map((note, i) => (
-                  <li key={i}>{note}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-
           {!order ? (
             <button
               type="button"
@@ -204,7 +269,9 @@ export default function OrderReview({
               disabled={ordering}
               className="w-full rounded-full bg-tiger-gold py-3 text-sm font-semibold text-charred-clove hover:bg-tiger-gold/90 disabled:opacity-50"
             >
-              {ordering ? "Placing mock order…" : "Place mock order →"}
+              {ordering
+                ? "Placing order…"
+                : `Place order — ${quantity} bundle${quantity > 1 ? "s" : ""} (${totalPieces} pcs)`}
             </button>
           ) : (
             <div className="rounded-md border border-tiger-gold/30 bg-tiger-gold/10 p-5">
@@ -213,16 +280,14 @@ export default function OrderReview({
                   ✓
                 </span>
                 <div>
-                  <p className="font-semibold text-fleek-text">Mock order confirmed</p>
+                  <p className="font-semibold text-fleek-text">Order confirmed</p>
                   <p className="text-xs text-fleek-muted">{order.order_id}</p>
                 </div>
               </div>
               <p className="mt-3 text-sm text-fleek-muted">{order.message}</p>
               <p className="mt-2 text-sm">
                 <span className="text-fleek-muted">Total: </span>
-                <span className="font-semibold text-tiger-gold">
-                  {formatGbp(order.estimate.total)}
-                </span>
+                <span className="font-semibold text-tiger-gold">{formatGbp(order.estimate.total)}</span>
               </p>
               <a
                 href={order.checkout_url}

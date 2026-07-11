@@ -105,11 +105,16 @@ def estimate_order(
 
     line_items: list[PriceLineItem] = [
         PriceLineItem(
-            label=f"{product.title} × {qty}" if qty > 1 else product.title,
+            label=f"{product.title} × {qty} bundle{'s' if qty > 1 else ''}",
             amount=bundle_total,
             currency="GBP",
             kind="bundle",
-            detail=bundle_label,
+            detail=bundle_label
+            + (
+                f" · ~£{(bundle_gbp / product.pieces):.2f}/pc · {product.pieces} pcs/bundle"
+                if product.pieces
+                else ""
+            ),
         ),
     ]
 
@@ -143,13 +148,15 @@ def estimate_order(
             )
 
     total = round(max(subtotal - discount, 0.0), 2)
+    total_pieces = (product.pieces or 0) * qty if product.pieces else None
+    per_piece = round(bundle_gbp / product.pieces, 2) if product.pieces else None
 
     notes = [
+        f"Ordering {qty} bundle(s)" + (f" = {total_pieces} pieces total" if total_pieces else ""),
         f"Bundle sourced from {product.url}",
         "AI preview uses gemini-3.1-flash-image at 1K (~$0.067/image per Google pricing).",
     ]
-    if product.pieces:
-        per_piece = bundle_gbp / product.pieces
+    if per_piece and product.pieces:
         notes.append(f"~£{per_piece:.2f}/piece on {product.pieces}-piece bundle (MOQ).")
 
     return PriceEstimate(
@@ -163,6 +170,11 @@ def estimate_order(
         bundle_price_gbp=bundle_total,
         promo_applied=discount_label,
         notes=notes,
+        quantity=qty,
+        unit_price_gbp=bundle_gbp,
+        price_per_piece_gbp=per_piece or 0.0,
+        pieces_per_bundle=product.pieces,
+        total_pieces=total_pieces,
     )
 
 
@@ -172,6 +184,7 @@ def create_mock_order(
     customization_prompt: str,
     promo_code: str | None = None,
     include_preview: bool = True,
+    quantity: int = 1,
 ) -> MockOrder:
     product = get_product(product_id)
     estimate = estimate_order(
@@ -179,6 +192,7 @@ def create_mock_order(
         customization_prompt=customization_prompt,
         promo_code=promo_code,
         include_preview=include_preview,
+        quantity=quantity,
     )
     order_id = f"ord_{uuid.uuid4().hex[:10]}"
     checkout_url = product.url
@@ -192,5 +206,5 @@ def create_mock_order(
         estimate=estimate,
         checkout_url=checkout_url,
         created_at=datetime.now(timezone.utc).isoformat(),
-        message="Mock order placed — redirect to Fleek to complete wholesale purchase.",
+        message=f"Mock order for {estimate.quantity} bundle(s) ({estimate.total_pieces or '?'} pcs) — complete on Fleek.",
     )

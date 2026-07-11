@@ -1,3 +1,5 @@
+import { matchedBundlesForItem } from "./outfit-matcher";
+import { resolveProductId } from "./pricing";
 import type { CurateResult, OutfitAnalysis, OutfitItem } from "./types";
 
 const FLEEK = "https://www.joinfleek.com";
@@ -44,11 +46,11 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
       brand: "Formal menswear",
       details: "Single-breasted, notched lapels",
       fleek_lookup: {
-        search_term: "Hugo Boss suit jacket menswear",
+        search_term: "mens blazer suit jacket wholesale",
         relevant_bundles: [
           {
-            title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
-            url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
+            title: "Men's Blazer & Suit Jacket Mix",
+            url: `${FLEEK}/search?q=mens+blazer+suit+jacket&options[prefix]=last`,
             price: "Wholesale bundle",
           },
         ],
@@ -62,16 +64,12 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
       brand: "Hugo Boss",
       details: "Structured spread collar",
       fleek_lookup: {
-        search_term: "Hugo Boss shirts menswear",
+        search_term: "Hugo Boss formal dress shirts",
         relevant_bundles: [
           {
-            title: "Hugo Boss T-Shirts Bundle 0001",
-            url: `${FLEEK}/products/hugo-boss-t-shirts0001`,
-            price: "Grade AB vintage",
-          },
-          {
-            title: "Hugo Boss Polos and T-Shirt",
-            url: `${FLEEK}/products/hugo-boss-polos-and-t-shirt`,
+            title: "Hugo Boss Formal Shirts Bundle",
+            url: `${FLEEK}/search?q=Hugo+Boss+formal+dress+shirts&options[prefix]=last`,
+            price: "Grade AB — formal line",
           },
         ],
       },
@@ -85,11 +83,11 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
       brand: "Formal menswear",
       details: "Flat front, creased leg",
       fleek_lookup: {
-        search_term: "Mens formal trousers wholesale",
+        search_term: "mens formal trousers dress pants wholesale",
         relevant_bundles: [
           {
-            title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
-            url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
+            title: "Men's Formal Trousers Mix",
+            url: `${FLEEK}/search?q=mens+formal+trousers&options[prefix]=last`,
             price: "Wholesale bundle",
           },
         ],
@@ -199,7 +197,8 @@ export function buildDemoCurateResult(params: {
     params.analysis.items[0];
 
   const original = item.image_url ?? "/demo/tie-boss.png";
-  const bundle = item.fleek_lookup.relevant_bundles[0];
+  const matched = matchedBundlesForItem(item, 1)[0] ?? item.fleek_lookup.relevant_bundles[0];
+  const productId = resolveProductId(item.id);
 
   return {
     analysis: params.analysis,
@@ -211,10 +210,10 @@ export function buildDemoCurateResult(params: {
       status: "demo",
     },
     matched_product: {
-      product_id: item.id === "tie" || item.id === "tie-selected" ? "fleek-hugo-boss-tie" : item.id,
-      title: bundle?.title ?? `${item.brand ?? ""} ${item.type}`.trim(),
-      url: bundle?.url ?? FLEEK,
-      price: bundle?.price ?? "See Fleek listing",
+      product_id: productId,
+      title: matched?.title ?? `${item.brand ?? ""} ${item.type}`.trim(),
+      url: matched?.url ?? FLEEK,
+      price: matched?.price ?? "See Fleek listing",
       image_url: original,
       match_score: 0.92,
     },

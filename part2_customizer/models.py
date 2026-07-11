@@ -43,6 +43,11 @@ class PriceEstimate(BaseModel):
     bundle_price_gbp: float = 0.0
     promo_applied: str | None = None
     notes: list[str] = Field(default_factory=list)
+    quantity: int = 1
+    unit_price_gbp: float = 0.0
+    price_per_piece_gbp: float = 0.0
+    pieces_per_bundle: int | None = None
+    total_pieces: int | None = None
 
 
 class MockOrder(BaseModel):

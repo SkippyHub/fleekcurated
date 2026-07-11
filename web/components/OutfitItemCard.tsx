@@ -1,3 +1,4 @@
+import { matchedBundlesForItem } from "@/lib/outfit-matcher";
 import type { OutfitItem } from "@/lib/types";
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function OutfitItemCard({ item, selected, onSelect }: Props) {
+  const bundles = matchedBundlesForItem(item, 2);
   return (
     <button
       type="button"
@@ -47,14 +49,14 @@ export default function OutfitItemCard({ item, selected, onSelect }: Props) {
         )}
       </dl>
 
-      {item.fleek_lookup.relevant_bundles.length > 0 && (
+      {bundles.length > 0 && (
         <div className="mt-3 border-t border-fleek-border pt-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-fleek-muted">
-            Fleek lookup
+            Fleek match
           </p>
           <p className="mt-1 text-xs text-fleek-muted">{item.fleek_lookup.search_term}</p>
           <ul className="mt-2 space-y-1">
-            {item.fleek_lookup.relevant_bundles.slice(0, 2).map((b) => (
+            {bundles.map((b) => (
               <li key={b.url}>
                 <a
                   href={b.url}

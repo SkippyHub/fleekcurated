@@ -11,12 +11,13 @@ import {
 import { buildCohesiveOutfit, outfitHasMultipleSlots } from "@/lib/outfit-matcher";
 import type { CurateResult } from "@/lib/types";
 import ExtractedItemsPanel from "./ExtractedItemsPanel";
+import FleekLookupPanel from "./FleekLookupPanel";
 import OutfitItemCard from "./OutfitItemCard";
 import OutfitRemerge from "./OutfitRemerge";
 import OrderReview from "./OrderReview";
 
 type InputMode = "text" | "image" | "demo";
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4;
 
 const TIE_PRODUCT_ID = "fleek-hugo-boss-tie";
 
@@ -170,7 +171,7 @@ export default function CuratorStudio() {
         ...mapped,
       }));
       setSource("api");
-      setStep(5);
+      setStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Alteration failed.");
     } finally {
@@ -195,11 +196,6 @@ export default function CuratorStudio() {
 
   const displayItems = result?.analysis.items ?? previewAnalysis?.items ?? [];
   const activeItemLabel = selectedItemLabel(displayItems, selectedItemId);
-  const primaryScenario = DEMO_SCENARIOS.suit;
-  const altScenarios = (Object.entries(DEMO_SCENARIOS) as [
-    keyof typeof DEMO_SCENARIOS,
-    (typeof DEMO_SCENARIOS)[keyof typeof DEMO_SCENARIOS],
-  ][]).filter(([key]) => key !== "suit");
 
   const demoImage = mode === "demo" ? DEMO_SCENARIOS[demoScenario].image : preview;
   const showDemoPreview = mode === "demo" || (mode === "image" && preview);
@@ -208,7 +204,7 @@ export default function CuratorStudio() {
     <div className="mx-auto max-w-6xl px-6 pb-16">
       {/* Step indicator */}
       <div className="mb-8 flex items-center gap-2 text-sm">
-        {([1, 2, 3, 4, 5] as Step[]).map((s) => (
+        {([1, 2, 3, 4] as Step[]).map((s) => (
           <div key={s} className="flex items-center gap-2">
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
@@ -224,11 +220,9 @@ export default function CuratorStudio() {
                   ? "Extract"
                   : s === 3
                     ? "Match"
-                    : s === 4
-                      ? "Customise"
-                      : "Order"}
+                    : "Customise & order"}
             </span>
-            {s < 5 && <span className="mx-1 text-fleek-border">/</span>}
+            {s < 4 && <span className="mx-1 text-fleek-border">/</span>}
           </div>
         ))}
         {result && (
@@ -278,93 +272,58 @@ export default function CuratorStudio() {
             <form onSubmit={handleAnalyze} className="mt-5 space-y-4">
               {mode === "demo" && (
                 <div className="space-y-4">
-                  <label
-                    className={`block cursor-pointer overflow-hidden rounded-md border transition ${
-                      demoScenario === "suit"
-                        ? "border-tiger-gold/50 bg-tiger-gold/5 ring-1 ring-tiger-gold/20"
-                        : "border-fleek-border hover:border-tiger-gold/30"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="demo"
-                      checked={demoScenario === "suit"}
-                      onChange={() => setDemoScenario("suit")}
-                      className="sr-only"
+                  <div className="overflow-hidden rounded-md border border-fleek-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={DEMO_SCENARIOS[demoScenario].image}
+                      alt={DEMO_SCENARIOS[demoScenario].label}
+                      className="w-full object-cover max-h-44"
                     />
-                    <div className="p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-tiger-gold">
-                            Recommended demo
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-fleek-text">
-                            {primaryScenario.label}
-                          </p>
-                          <p className="mt-0.5 text-xs text-fleek-muted">{primaryScenario.caption}</p>
-                        </div>
-                      </div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={primaryScenario.image}
-                        alt="Model in blue suit"
-                        className="mt-3 w-full rounded-md object-cover max-h-44"
-                      />
-                    </div>
-                  </label>
-
-                  {previewAnalysis && demoScenario === "suit" && (
-                    <ExtractedItemsPanel
-                      items={previewAnalysis.items}
-                      selectedId={selectedItemId}
-                      onSelect={handlePreviewItemSelect}
-                    />
-                  )}
-
-                  <div>
-                    <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-fleek-muted">
-                      Also try
-                    </p>
-                    <div className="space-y-2">
-                      {altScenarios.map(([key, s]) => (
-                        <label
-                          key={key}
-                          className={`flex cursor-pointer gap-3 rounded-md border p-2.5 transition ${
-                            demoScenario === key
-                              ? "border-tiger-gold/40 bg-tiger-gold/5"
-                              : "border-fleek-border hover:border-tiger-gold/30"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="demo"
-                            checked={demoScenario === key}
-                            onChange={() => setDemoScenario(key)}
-                            className="mt-0.5"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-fleek-text">{s.label}</p>
-                            <p className="text-xs text-fleek-muted">{s.caption}</p>
-                          </div>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={s.image}
-                            alt=""
-                            className="h-12 w-12 shrink-0 rounded-md object-cover"
-                          />
-                        </label>
-                      ))}
+                    <div className="border-t border-fleek-border bg-fleek-bg px-3 py-2">
+                      <p className="text-sm font-semibold text-fleek-text">
+                        {DEMO_SCENARIOS[demoScenario].label}
+                      </p>
+                      <p className="text-xs text-fleek-muted">
+                        {DEMO_SCENARIOS[demoScenario].caption}
+                      </p>
                     </div>
                   </div>
 
-                  {previewAnalysis && demoScenario !== "suit" && (
-                    <ExtractedItemsPanel
-                      items={previewAnalysis.items}
-                      selectedId={selectedItemId}
-                      onSelect={handlePreviewItemSelect}
-                      compact
-                    />
+                  {previewAnalysis && (
+                    <>
+                      <ExtractedItemsPanel
+                        items={previewAnalysis.items}
+                        selectedId={selectedItemId}
+                        onSelect={handlePreviewItemSelect}
+                      />
+                      <FleekLookupPanel
+                        items={previewAnalysis.items}
+                        cohesiveOutfit={cohesiveOutfit}
+                        selectedItemId={selectedItemId}
+                        onSelectItem={handlePreviewItemSelect}
+                      />
+                    </>
                   )}
+
+                  <p className="border-t border-fleek-border pt-3 text-[10px] text-fleek-muted">
+                    Switch demo:{" "}
+                    {(["suit", "tie", "pile"] as const).map((key, i) => (
+                      <span key={key}>
+                        {i > 0 && " · "}
+                        <button
+                          type="button"
+                          onClick={() => setDemoScenario(key)}
+                          className={
+                            demoScenario === key
+                              ? "font-semibold text-tiger-gold"
+                              : "hover:text-fleek-text hover:underline"
+                          }
+                        >
+                          {key === "suit" ? "full outfit" : key === "tie" ? "tie crop" : "tie pile"}
+                        </button>
+                      </span>
+                    ))}
+                  </p>
                 </div>
               )}
 
@@ -521,9 +480,9 @@ export default function CuratorStudio() {
 
           {/* Part 2 */}
           <div className="surface-accent rounded-md p-6 sm:p-7">
-            <h3 className="text-lg font-semibold text-fleek-text">4. AI alteration (Gemini Banana)</h3>
+            <h3 className="text-lg font-semibold text-fleek-text">4. Customise & order</h3>
             <p className="mt-1 text-sm text-fleek-muted">
-              Part 2 — calls <code className="rounded bg-fleek-surface px-1 text-fleek-text">POST /customize</code> with your prompt
+              AI alteration preview + wholesale pricing for {activeItemLabel.toLowerCase()}
             </p>
 
             <button
@@ -607,18 +566,23 @@ export default function CuratorStudio() {
                     View on joinfleek.com →
                   </a>
                 </div>
+
+                <OrderReview
+                  compact
+                  itemId={selectedItemId}
+                  itemLabel={activeItemLabel}
+                  productId={resolveProductId(result)}
+                  customizationPrompt={customPrompt}
+                  productTitle={result.matched_product.title}
+                  productUrl={result.matched_product.url}
+                  includePreview={
+                    result.customization.status === "generated" ||
+                    result.customization.status === "cached"
+                  }
+                />
               </div>
             )}
           </div>
-
-          {result && !altering && (
-            <OrderReview
-              productId={resolveProductId(result)}
-              customizationPrompt={customPrompt}
-              productTitle={result.matched_product.title}
-              productUrl={result.matched_product.url}
-            />
-          )}
         </section>
       </div>
     </div>
