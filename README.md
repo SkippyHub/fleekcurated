@@ -9,6 +9,11 @@ Customer prompt (text or image)
         │
         ▼
 ┌─────────────────────┐
+│  Next.js site (web/) │  ← demo UI
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
 │  Part 1 — Classifier │  ← initialised here
 │  • text vs image     │
 │  • describe intent   │
@@ -35,17 +40,27 @@ Determines whether input is **text** or **image**, then returns a structured des
 
 ### Quick start
 
+**Terminal 1 — Python API**
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # optional: add OPENAI_API_KEY for smarter descriptions
-
-# Run API
 python main.py
 ```
 
 API docs: http://localhost:8000/docs
+
+**Terminal 2 — Next.js site**
+
+```bash
+cd web
+cp .env.local.example .env.local
+npm run dev
+```
+
+Site: http://localhost:3000
 
 ### Example — text prompt
 
@@ -100,5 +115,6 @@ git push -u origin main
 
 | Part | Owner | Status |
 |------|-------|--------|
+| Next.js site | Shared / initialised | ✅ Ready |
 | 1 — Classifier | Shared / initialised | ✅ Ready |
 | 2 — AI customisation + product lookup | You | 🔨 In progress |

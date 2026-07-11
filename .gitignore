@@ -25,3 +25,10 @@ htmlcov/
 uploads/
 tmp/
 *.log
+
+# Next.js
+web/node_modules/
+web/.next/
+web/.env.local
+web/*.tsbuildinfo
+web/next-env.d.ts
