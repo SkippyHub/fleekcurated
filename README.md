@@ -87,12 +87,22 @@ print(result.classification.input_type)  # text
 print(result.description.customization_intent)
 ```
 
-## Part 2 — Customizer (TODO)
+## Part 2 — Customizer (stub wired)
 
-Your piece — stubs are in `part2_customizer/`:
+Part 1 and Part 2 connect via `POST /curate`. Mock catalogue lives in `part1_classifier/data/mock_products.json`.
 
-1. **`customizer.py`** — take a Fleek product + Part 1 description → AI-generate unique clothing
-2. **`product_lookup.py`** — map the result back to a product on joinfleek.com
+Your work — replace the mock in:
+
+1. **`customizer.py`** — swap `status: "mock"` for real AI image generation
+2. **`product_lookup.py`** — real catalogue search when available
+
+### Integration endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /products` | Mock Fleek catalogue |
+| `POST /analyze` | Part 1 only |
+| `POST /curate` | Part 1 → Part 2 full pipeline |
 
 ## Tests
 

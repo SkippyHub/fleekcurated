@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { analyzePrompt } from "@/lib/api";
-import type { AnalyzeResponse } from "@/lib/types";
+import { useCallback, useEffect, useState } from "react";
+import { curatePrompt, fetchProducts } from "@/lib/api";
+import type { CurateResponse, MockProduct } from "@/lib/types";
 
 type InputMode = "text" | "image";
 
@@ -11,9 +11,20 @@ export default function CuratorStudio() {
   const [text, setText] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [products, setProducts] = useState<MockProduct[]>([]);
+  const [productId, setProductId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalyzeResponse | null>(null);
+  const [result, setResult] = useState<CurateResponse | null>(null);
+
+  useEffect(() => {
+    fetchProducts()
+      .then((data) => {
+        setProducts(data.products);
+        if (data.products.length > 0) setProductId(data.products[0].id);
+      })
+      .catch(() => setError("Could not load mock Fleek products. Is the API running?"));
+  }, []);
 
   const onImageChange = useCallback((file: File | null) => {
     setImage(file);
@@ -26,6 +37,10 @@ export default function CuratorStudio() {
     setError(null);
     setResult(null);
 
+    if (!productId) {
+      setError("Pick a Fleek product to customise.");
+      return;
+    }
     if (mode === "text" && !text.trim()) {
       setError("Describe what you want to customise.");
       return;
@@ -37,7 +52,8 @@ export default function CuratorStudio() {
 
     setLoading(true);
     try {
-      const data = await analyzePrompt({
+      const data = await curatePrompt({
+        productId,
         text: text.trim() || undefined,
         image: mode === "image" ? image ?? undefined : undefined,
       });
@@ -49,13 +65,41 @@ export default function CuratorStudio() {
     }
   }
 
+  const selectedProduct = products.find((p) => p.id === productId);
+
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm sm:p-8">
         <h2 className="mb-1 text-lg font-semibold tracking-tight">Your brief</h2>
         <p className="mb-6 text-sm text-zinc-400">
-          Text or image — Part 1 classifies your prompt and extracts the customisation intent.
+          Pick a Fleek product, describe the customisation — Part 1 + Part 2 run together.
         </p>
+
+        <label className="mb-5 block">
+          <span className="mb-2 block text-xs uppercase tracking-wider text-zinc-500">
+            Fleek product
+          </span>
+          <select
+            value={productId}
+            onChange={(e) => setProductId(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-lime-400/60 focus:outline-none"
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id} className="bg-zinc-900">
+                {p.title} — {p.price}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {selectedProduct && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={selectedProduct.image_url}
+            alt={selectedProduct.title}
+            className="mb-5 max-h-40 w-full rounded-xl object-cover"
+          />
+        )}
 
         <div className="mb-6 flex gap-2 rounded-full bg-white/5 p-1">
           {(["text", "image"] as const).map((tab) => (
@@ -124,7 +168,7 @@ export default function CuratorStudio() {
             disabled={loading}
             className="w-full rounded-full bg-lime-400 py-3 text-sm font-semibold text-black transition hover:bg-lime-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Analysing…" : "Analyse prompt"}
+            {loading ? "Curating…" : "Curate (Part 1 + 2)"}
           </button>
         </form>
       </section>
@@ -135,7 +179,7 @@ export default function CuratorStudio() {
 
           {!result && !loading && (
             <p className="text-sm text-zinc-500">
-              Results appear here after you analyse a prompt.
+              Part 1 results appear here after you curate.
             </p>
           )}
 
@@ -151,66 +195,73 @@ export default function CuratorStudio() {
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-lime-400/15 px-3 py-1 text-xs font-medium uppercase tracking-wide text-lime-300">
-                  {result.classification.input_type}
+                  {result.analysis.classification.input_type}
                 </span>
                 <span className="text-xs text-zinc-500">
-                  {Math.round(result.classification.confidence * 100)}% confidence
+                  {Math.round(result.analysis.classification.confidence * 100)}% confidence
                 </span>
               </div>
 
               <div>
                 <p className="mb-1 text-xs uppercase tracking-wider text-zinc-500">Summary</p>
                 <p className="text-sm leading-relaxed text-zinc-200">
-                  {result.description.summary}
+                  {result.analysis.description.summary}
                 </p>
               </div>
 
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <Field label="Clothing item" value={result.description.clothing_item} />
+                <Field label="Clothing item" value={result.analysis.description.clothing_item} />
                 <Field
                   label="Customisation"
-                  value={result.description.customization_intent}
+                  value={result.analysis.description.customization_intent}
                 />
               </dl>
-
-              {result.description.style_tags.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs uppercase tracking-wider text-zinc-500">Style tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {result.description.style_tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
 
         <div className="rounded-2xl border border-dashed border-lime-400/25 bg-lime-400/[0.04] p-6 sm:p-8">
           <h2 className="mb-2 text-lg font-semibold tracking-tight">Part 2 — Customisation</h2>
-          <p className="text-sm leading-relaxed text-zinc-400">
-            Your hackathon piece: take the Fleek product image, run AI customisation using the
-            intent above, then look up the new product on{" "}
-            <a
-              href="https://joinfleek.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lime-300 underline-offset-2 hover:underline"
-            >
-              joinfleek.com
-            </a>
-            .
-          </p>
+
+          {!result && !loading && (
+            <p className="text-sm text-zinc-400">
+              Mock pipeline wired — replace AI generation in{" "}
+              <code className="text-lime-300">part2_customizer/customizer.py</code>.
+            </p>
+          )}
+
           {result && (
-            <pre className="mt-4 overflow-x-auto rounded-xl bg-black/50 p-4 text-xs text-zinc-400">
-              {JSON.stringify(result.description, null, 2)}
-            </pre>
+            <div className="space-y-4">
+              <span className="inline-block rounded-full bg-amber-400/15 px-3 py-1 text-xs font-medium uppercase text-amber-200">
+                {result.customization.status}
+              </span>
+
+              <p className="text-sm text-zinc-300">
+                Prompt: {result.customization.prompt_used}
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ImageCard label="Original" src={result.customization.original_image_url} />
+                <ImageCard label="Customised" src={result.customization.customized_image_url} />
+              </div>
+
+              <div className="rounded-xl bg-black/40 p-4">
+                <p className="text-xs uppercase tracking-wider text-zinc-500">Matched product</p>
+                <p className="mt-1 font-medium text-white">{result.matched_product.title}</p>
+                <p className="text-sm text-lime-300">{result.matched_product.price}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Match {Math.round(result.matched_product.match_score * 100)}%
+                </p>
+                <a
+                  href={result.matched_product.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-block text-sm text-lime-300 underline-offset-2 hover:underline"
+                >
+                  View on joinfleek.com →
+                </a>
+              </div>
+            </div>
           )}
         </div>
       </section>
@@ -223,6 +274,16 @@ function Field({ label, value }: { label: string; value: string | null }) {
     <div className="rounded-xl bg-black/30 px-4 py-3">
       <dt className="text-xs uppercase tracking-wider text-zinc-500">{label}</dt>
       <dd className="mt-1 text-zinc-200">{value ?? "—"}</dd>
+    </div>
+  );
+}
+
+function ImageCard({ label, src }: { label: string; src: string }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs uppercase tracking-wider text-zinc-500">{label}</p>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={label} className="h-40 w-full rounded-xl object-cover" />
     </div>
   );
 }
