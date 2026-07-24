@@ -4,6 +4,8 @@
 
 Portfolio: https://www.marlonleong.com/projects/fleek-curated
 
+Demo video: https://youtu.be/1fdp-176fJQ
+
 Hackathon project for **[Fleek](https://joinfleek.com)** — AI-powered clothing upselling. Customers describe what they want (text or image), we classify and understand the request, then customise Fleek products to make them unique.
 
 ## Architecture
