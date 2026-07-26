@@ -28,7 +28,7 @@ export function enrichDemoAssets(
         image_url: item.image_url ?? "/demo/tie-boss.png",
         customization_intent:
           item.customization_intent ??
-          "Add embroidered 'join fleek' branding, keep pattern and BOSS logo",
+          "Add embroidered 'join fleek' branding make it stand out, keep pattern and BOSS logo",
       };
     }
     if (scenario === "tie" && isTieItem(item)) {

@@ -2,9 +2,8 @@ import { DEMO_SCENARIOS } from "@/lib/demo";
 
 const FLOW_STEPS = [
   { step: "1", title: "Inspire", desc: "Share a look, mood board, or reference photo" },
-  { step: "2", title: "Extract", desc: "Gemini identifies every garment in the outfit" },
-  { step: "3", title: "Wardrobe", desc: "Pick real Fleek listings for each piece" },
-  { step: "4", title: "Customise", desc: "Optional — preview branding or alterations" },
+  { step: "2", title: "Wardrobe", desc: "We match each piece to real Fleek listings" },
+  { step: "3", title: "Customise", desc: "Optional — preview branding or alterations" },
 ] as const;
 
 const USE_CASES = [
@@ -39,7 +38,8 @@ export default function Hero() {
         </h2>
         <p className="mt-4 text-base leading-relaxed text-fleek-muted sm:text-lg">
           Whether you&apos;re styling yourself, dressing a film set, or branding at wholesale
-          scale — upload a reference look. Gemini extracts each piece, matches real listings on{" "}
+          scale — upload a reference look. We identify each piece behind the scenes, match real
+          listings on{" "}
           <a
             href="https://joinfleek.com"
             className="font-medium text-fleek-text underline-offset-2 hover:text-tiger-gold hover:underline"
@@ -62,7 +62,7 @@ export default function Hero() {
         ))}
       </div>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
         {FLOW_STEPS.map(({ step, title, desc }) => (
           <div key={step} className="surface-card rounded-md p-4">
             <p className="text-xs font-medium uppercase tracking-wider text-tiger-gold">

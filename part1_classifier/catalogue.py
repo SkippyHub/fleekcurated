@@ -16,6 +16,11 @@ class MockProduct(BaseModel):
     id: str
     title: str
     category: str
+    slots: list[str] = Field(default_factory=list)
+    brands: list[str] = Field(default_factory=list)
+    search_keywords: list[str] = Field(default_factory=list)
+    formality: list[str] = Field(default_factory=list)
+    colors: list[str] = Field(default_factory=list)
     style_tags: list[str] = Field(default_factory=list)
     price: str
     url: str

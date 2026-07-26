@@ -20,6 +20,9 @@ interface Props {
   onCustomiseItem?: (id: string) => void;
   customizedItemId?: string;
   customizedImageUrl?: string;
+  analysisSummary?: string;
+  confidence?: number;
+  source?: string;
 }
 
 function SlotRow({
@@ -153,16 +156,36 @@ export default function Wardrobe({
   onCustomiseItem,
   customizedItemId,
   customizedImageUrl,
+  analysisSummary,
+  confidence,
+  source,
 }: Props) {
   return (
     <div className="surface-card rounded-md p-6 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-fleek-text">3. Your curated wardrobe</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-fleek-text">2. Your curated wardrobe</h3>
+            {source && (
+              <span className="rounded-full border border-fleek-border bg-fleek-bg px-2 py-0.5 text-[10px] font-medium uppercase text-fleek-muted">
+                {source === "gemini" ? "Live match" : `${source} mode`}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-fleek-muted">
-            Select a specific Fleek listing for each piece — that product image powers your
-            customisation preview.
+            We matched each piece from your look to real Fleek listings — pick the bundle you want
+            to source, then customise only if you need a branded preview.
           </p>
+          {analysisSummary && (
+            <p className="mt-2 text-xs leading-relaxed text-fleek-muted line-clamp-2">
+              {analysisSummary}
+              {confidence != null && (
+                <span className="ml-1 text-fleek-muted/80">
+                  · {Math.round(confidence * 100)}% match confidence
+                </span>
+              )}
+            </p>
+          )}
         </div>
         <div className="rounded-full border border-tiger-gold/30 bg-tiger-gold/10 px-4 py-2 text-center">
           <p className="text-[10px] font-medium uppercase tracking-wider text-fleek-muted">

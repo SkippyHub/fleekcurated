@@ -41,9 +41,18 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
         search_term: "mens blazer suit jacket wholesale",
         relevant_bundles: [
           {
-            title: "Men's Blazer & Suit Jacket Mix",
-            url: `${FLEEK}/search?q=mens+blazer+suit+jacket&options[prefix]=last`,
+            product_id: "fleek-polo-ralph-lauren-blazers",
+            title: "Polo Ralph Lauren Blazers",
+            url: `${FLEEK}/products/polo-ralph-lauren-blazers`,
             price: "Wholesale bundle",
+            match_score: 0.9,
+          },
+          {
+            product_id: "fleek-mens-blazer-mix",
+            title: "Men's Blazer & Suit Jacket Mix",
+            url: `${FLEEK}/products/mens-blazer-suit-jacket-mix`,
+            price: "Wholesale bundle",
+            match_score: 0.85,
           },
         ],
       },
@@ -59,9 +68,18 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
         search_term: "Hugo Boss formal dress shirts",
         relevant_bundles: [
           {
+            product_id: "fleek-hugo-boss-formal-shirts",
             title: "Hugo Boss Formal Shirts Bundle",
-            url: `${FLEEK}/search?q=Hugo+Boss+formal+dress+shirts&options[prefix]=last`,
+            url: `${FLEEK}/products/hugo-boss-formal-shirts-bundle`,
             price: "Grade AB — formal line",
+            match_score: 0.92,
+          },
+          {
+            product_id: "fleek-hugo-boss-shirts",
+            title: "Hugo Boss Shirts Bundle",
+            url: `${FLEEK}/products/hugo-boss-shirts`,
+            price: "Wholesale bundle",
+            match_score: 0.88,
           },
         ],
       },
@@ -78,9 +96,18 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
         search_term: "mens formal trousers dress pants wholesale",
         relevant_bundles: [
           {
+            product_id: "fleek-mens-formal-trousers",
             title: "Men's Formal Trousers Mix",
-            url: `${FLEEK}/search?q=mens+formal+trousers&options[prefix]=last`,
+            url: `${FLEEK}/products/mens-formal-trousers-mix`,
             price: "Wholesale bundle",
+            match_score: 0.88,
+          },
+          {
+            product_id: "fleek-ralph-lauren-trousers",
+            title: "Ralph Lauren Trousers",
+            url: `${FLEEK}/products/ralph-lauren-trousers`,
+            price: "Wholesale bundle",
+            match_score: 0.86,
           },
         ],
       },
@@ -98,9 +125,18 @@ export const MOCK_OUTFIT_SUIT: OutfitAnalysis = {
         search_term: "Hugo Boss ties neckwear",
         relevant_bundles: [
           {
+            product_id: "fleek-hugo-boss-tie",
             title: "Designer Ties Bundle (500 pcs)",
             url: `${FLEEK}/products/designer-ties-bundle-set-of-500`,
             price: "Bulk wholesale",
+            match_score: 0.95,
+          },
+          {
+            product_id: "fleek-mix-neckwear",
+            title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
+            url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
+            price: "Wholesale bundle",
+            match_score: 0.88,
           },
         ],
       },
@@ -137,9 +173,18 @@ export const MOCK_OUTFIT_TIE: OutfitAnalysis = {
         search_term: "Hugo Boss ties neckwear",
         relevant_bundles: [
           {
+            product_id: "fleek-hugo-boss-tie",
             title: "Designer Ties Bundle (500 pcs)",
             url: `${FLEEK}/products/designer-ties-bundle-set-of-500`,
             price: "Bulk wholesale",
+            match_score: 0.95,
+          },
+          {
+            product_id: "fleek-mix-neckwear",
+            title: "Men's Mix Brand Tie & Neckwear (23 pcs)",
+            url: `${FLEEK}/products/men-s-mix-brand-tie-neckwear-23-pieces`,
+            price: "Wholesale bundle",
+            match_score: 0.88,
           },
         ],
       },

@@ -39,7 +39,10 @@ Rules:
 - For FULL OUTFIT images: extract EVERY visible garment (jacket, shirt, trousers, tie, dress, shoes if clear).
 - For single product images: one item.
 - For text like "party wear for dinner" or "summer beach dress": infer likely garments and search terms even without a photo.
-- fleek_search_term must be short, Fleek-searchable (brand + garment + style), no full sentences.
+- fleek_search_term must be short and Fleek-searchable: **brand + garment type** (e.g. "hugo boss tie", "ralph lauren blazer", "mens formal trousers").
+- Fleek sells **vintage wholesale bundles**, not individual SKUs — search terms should match how listings appear on joinfleek.com (bundle, mix, wholesale).
+- Use item ids that match garment slots: jacket, shirt, trousers, tie (not coat, pants, necktie as ids).
+- If brand is visible (Hugo Boss, Ralph Lauren), always include it in fleek_search_term.
 - Use British spelling in summary if natural.
 """
 
